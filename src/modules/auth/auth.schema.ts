@@ -1,0 +1,22 @@
+import { z } from "zod";
+
+export const registerSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+
+  username: z
+    .string()
+    .trim()
+    .min(3)
+    .max(80)
+    .regex(/^[a-zA-Z0-9_.-]+$/),
+
+  email: z.string().email().optional(),
+
+  password: z.string().min(8).max(128)
+});
+
+export const loginSchema = z.object({
+  identifier: z.string().trim().min(3).max(255),
+
+  password: z.string().min(8).max(128)
+});
