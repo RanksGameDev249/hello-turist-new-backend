@@ -21,6 +21,8 @@ model User {
   refreshSessions      RefreshSession[]
   roles                UserRoleAssignment[]
   verificationRequests VerificationRequest[]
+  driverProfile        DriverProfile?
+  guideProfile         GuideProfile?
 
   @@map("users")
 }
@@ -84,7 +86,7 @@ model VerificationRequest {
 
 model VerificationStep {
   id                    String                  @id @default(uuid()) @db.Uuid
- verificationRequestId String @unique @map("verification_request_id") @db.Uuid
+  verificationRequestId String                  @map("verification_request_id") @db.Uuid
   step                  VerificationStepType
   status                VerificationStepStatus @default(PENDING)
   completedAt           DateTime?               @map("completed_at")
@@ -118,7 +120,7 @@ model VerificationDocument {
 
 model VerificationLiveSession {
   id                    String                  @id @default(uuid()) @db.Uuid
-  verificationRequestId String                  @unique @map("verification_request_id")
+  verificationRequestId String                  @unique @map("verification_request_id") @db.Uuid
   providerReference     String                  @map("provider_reference")
   status                VerificationStepStatus @default(PENDING)
   startedAt             DateTime?               @map("started_at")
@@ -129,6 +131,79 @@ model VerificationLiveSession {
   verificationRequest  VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
 
   @@map("verification_live_sessions")
+}
+
+model DriverProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  bio               String?
+  experienceYears   Int?     @map("experience_years")
+  serviceCity       String?  @map("service_city")
+  serviceArea       String?  @map("service_area")
+  profileImageKey   String?  @map("profile_image_key")
+  isAvailable       Boolean  @default(false) @map("is_available")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicles          Vehicle[]
+
+  @@index([serviceCity])
+  @@index([isAvailable])
+  @@map("driver_profiles")
+}
+
+model GuideProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  bio               String?
+  experienceYears   Int?     @map("experience_years")
+  serviceCity       String?  @map("service_city")
+  profileImageKey   String?  @map("profile_image_key")
+  languages         String[] @default([])
+  specialties       String[] @default([])
+  isAvailable       Boolean  @default(false) @map("is_available")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([serviceCity])
+  @@index([isAvailable])
+  @@map("guide_profiles")
+}
+
+model Vehicle {
+  id                String        @id @default(uuid()) @db.Uuid
+  driverProfileId   String        @map("driver_profile_id") @db.Uuid
+  make              String
+  model             String
+  year              Int?
+  registrationNumber String       @map("registration_number")
+  vehicleType       VehicleType   @default(CAR) @map("vehicle_type")
+  seatCount         Int           @map("seat_count")
+  color             String?
+  imageKey          String?       @map("image_key")
+  isActive          Boolean       @default(true) @map("is_active")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  driverProfile     DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([registrationNumber])
+  @@index([driverProfileId])
+  @@index([isActive])
+  @@map("vehicles")
+}
+
+enum VehicleType {
+  CAR
+  SUV
+  SEDAN
+  HATCHBACK
+  VAN
+  BUS
+  OTHER
 }
 
 enum UserStatus {
