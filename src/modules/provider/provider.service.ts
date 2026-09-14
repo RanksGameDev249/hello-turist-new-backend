@@ -1,4 +1,5 @@
 import { prisma } from "../../core/prisma";
+import type { VehicleInput } from "./provider.schema";
 
 const driverSelect = {
   id: true,
@@ -36,7 +37,6 @@ async function requireRole(userId: string, role: "DRIVER" | "GUIDE") {
     where: { userId_role: { userId, role } },
     select: { verificationStatus: true },
   });
-
   if (!assignment) throw new Error("ROLE_NOT_FOUND");
   return assignment;
 }
@@ -48,12 +48,7 @@ export async function getDriverProfile(userId: string) {
 
 export async function upsertDriverProfile(userId: string, data: Record<string, unknown>) {
   await requireRole(userId, "DRIVER");
-  return prisma.driverProfile.upsert({
-    where: { userId },
-    create: { userId, ...data },
-    update: data,
-    select: driverSelect,
-  });
+  return prisma.driverProfile.upsert({ where: { userId }, create: { userId, ...data }, update: data, select: driverSelect });
 }
 
 export async function getGuideProfile(userId: string) {
@@ -63,12 +58,7 @@ export async function getGuideProfile(userId: string) {
 
 export async function upsertGuideProfile(userId: string, data: Record<string, unknown>) {
   await requireRole(userId, "GUIDE");
-  return prisma.guideProfile.upsert({
-    where: { userId },
-    create: { userId, ...data },
-    update: data,
-    select: guideSelect,
-  });
+  return prisma.guideProfile.upsert({ where: { userId }, create: { userId, ...data }, update: data, select: guideSelect });
 }
 
 async function requireDriverProfile(userId: string) {
@@ -78,9 +68,21 @@ async function requireDriverProfile(userId: string) {
   return profile;
 }
 
-export async function createVehicle(userId: string, data: Record<string, unknown>) {
+export async function createVehicle(userId: string, data: VehicleInput) {
   const profile = await requireDriverProfile(userId);
-  return prisma.vehicle.create({ data: { driverProfileId: profile.id, ...data } });
+  return prisma.vehicle.create({
+    data: {
+      driverProfileId: profile.id,
+      make: data.make,
+      model: data.model,
+      year: data.year,
+      registrationNumber: data.registrationNumber,
+      vehicleType: data.vehicleType,
+      seatCount: data.seatCount,
+      color: data.color,
+      imageKey: data.imageKey,
+    },
+  });
 }
 
 export async function listVehicles(userId: string) {
