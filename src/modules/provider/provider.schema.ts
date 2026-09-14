@@ -31,3 +31,8 @@ export const vehicleSchema = z.object({
 });
 
 export const updateVehicleSchema = vehicleSchema.partial();
+
+export type DriverProfileInput = z.infer<typeof driverProfileSchema>;
+export type GuideProfileInput = z.infer<typeof guideProfileSchema>;
+export type VehicleInput = z.infer<typeof vehicleSchema>;
+export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
