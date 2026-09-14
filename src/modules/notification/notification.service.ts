@@ -1,5 +1,5 @@
 import { prisma } from "../../core/prisma";
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma, NotificationType } from "../../generated/prisma/client";
 import type { NotificationIdInput } from "./notification.schema";
 
 export async function listNotifications(userId: string) {
@@ -52,7 +52,7 @@ export async function deleteNotification(userId: string, { id }: NotificationIdI
 export async function createNotification(
   userId: string,
   input: {
-    type: Prisma.NotificationType;
+    type: NotificationType;
     title: string;
     body: string;
     data?: Prisma.InputJsonValue;
