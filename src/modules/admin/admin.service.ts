@@ -1,4 +1,26 @@
 import { prisma } from "../../core/prisma";
+import { NotificationType } from "../../generated/prisma/client";
+
+async function sendVerificationDecisionNotification(
+  userId: string,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+) {
+  try {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: NotificationType.VERIFICATION_UPDATE,
+        title,
+        body,
+        data,
+      },
+    });
+  } catch {
+    // Notification delivery must never break the verification decision.
+  }
+}
 
 export async function updateRoleVerification(
   userId: string,
@@ -55,8 +77,8 @@ export async function decideVerificationRequest(
     throw new Error("INVALID_VERIFICATION_STATE");
   }
 
-  return prisma.$transaction(async (tx) => {
-    const updatedRequest = await tx.verificationRequest.update({
+  const updatedRequest = await prisma.$transaction(async (tx) => {
+    const updated = await tx.verificationRequest.update({
       where: { id: request.id },
       data: {
         status,
@@ -108,6 +130,35 @@ export async function decideVerificationRequest(
       },
     });
 
-    return updatedRequest;
+    return updated;
   });
+
+  if (status === "VERIFIED") {
+    await sendVerificationDecisionNotification(
+      request.userId,
+      "Verification approved",
+      `Your ${request.role.toLowerCase()} verification has been approved.`,
+      {
+        event: "VERIFICATION_APPROVED",
+        verificationRequestId: requestId,
+        role: request.role,
+      },
+    );
+  } else {
+    await sendVerificationDecisionNotification(
+      request.userId,
+      "Verification rejected",
+      rejectionReason
+        ? `Your ${request.role.toLowerCase()} verification was rejected: ${rejectionReason}`
+        : `Your ${request.role.toLowerCase()} verification was rejected.`,
+      {
+        event: "VERIFICATION_REJECTED",
+        verificationRequestId: requestId,
+        role: request.role,
+        rejectionReason: rejectionReason ?? "",
+      },
+    );
+  }
+
+  return updatedRequest;
 }
