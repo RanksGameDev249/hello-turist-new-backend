@@ -30,10 +30,4 @@ router.post(
   addRole
 );
 
-router.patch(
-  "/me/roles/:role",
-  authMiddleware,
-  updateRole
-);
-
 export default router;

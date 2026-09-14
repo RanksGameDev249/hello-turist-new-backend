@@ -3,6 +3,8 @@
     import { requestIdMiddleware } from "./middleware/request-id";
     import authRouter from "./modules/auth/auth.route";
     import usersRouter from "./modules/users/users.route";
+    import adminRouter from "./modules/admin/admin.route";
+    import { errorHandler } from "./middleware/error-handler";
 
     dotenv.config();
 
@@ -25,5 +27,9 @@
     // API v1
     app.use("/api/v1/auth", authRouter);
     app.use("/api/v1/users", usersRouter);
+    app.use("/api/v1/admin", adminRouter);
 
+
+    app.use(errorHandler);
+    
     export default app;

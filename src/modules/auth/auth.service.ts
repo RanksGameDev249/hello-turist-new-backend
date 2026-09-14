@@ -18,9 +18,13 @@ export async function registerUser(input: {
   email?: string;
   password: string;
 }) {
+  const name = input.name.trim();
+  const username = input.username.trim().toLowerCase();
+  const email = input.email?.trim().toLowerCase();
+
   const existingUsername = await prisma.user.findUnique({
     where: {
-      username: input.username,
+      username,
     },
   });
 
@@ -28,10 +32,10 @@ export async function registerUser(input: {
     throw new Error("USERNAME_ALREADY_EXISTS");
   }
 
-  if (input.email) {
+  if (email) {
     const existingEmail = await prisma.user.findUnique({
       where: {
-        email: input.email,
+        email,
       },
     });
 
@@ -44,9 +48,9 @@ export async function registerUser(input: {
 
   const user = await prisma.user.create({
     data: {
-      name: input.name,
-      username: input.username,
-      email: input.email,
+      name,
+      username,
+      email,
       passwordHash,
     },
     select: {
@@ -67,14 +71,16 @@ export async function loginUser(input: {
   identifier: string;
   password: string;
 }) {
+  const identifier = input.identifier.trim().toLowerCase();
+
   const user = await prisma.user.findFirst({
     where: {
       OR: [
         {
-          username: input.identifier,
+          username: identifier,
         },
         {
-          email: input.identifier,
+          email: identifier,
         },
       ],
     },
@@ -109,7 +115,6 @@ export async function loginUser(input: {
   );
 
   const refreshToken = generateRefreshToken();
-
   const refreshTokenHash = hashToken(refreshToken);
 
   const expiresAt = new Date(
