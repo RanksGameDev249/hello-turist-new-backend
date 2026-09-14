@@ -1,108 +1,88 @@
 import { Request, Response } from "express";
-import { updateRoleVerificationSchema } from "./admin.schema";
-import { updateRoleVerification } from "./admin.service";
+import { updateRoleVerificationSchema, verificationDecisionSchema } from "./admin.schema";
+import { decideVerificationRequest, updateRoleVerification } from "./admin.service";
 
-export async function updateUserRoleVerification(
-  req: Request,
-  res: Response
-) {
+function param(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function errorResponse(req: Request, res: Response, status: number, code: string, message: string, details?: unknown) {
+  return res.status(status).json({
+    success: false,
+    data: null,
+    error: { code, message, ...(details !== undefined ? { details } : {}) },
+    requestId: req.requestId,
+  });
+}
+
+export async function updateUserRoleVerification(req: Request, res: Response) {
   try {
-   const userId = Array.isArray(req.params.userId)
-  ? req.params.userId[0]
-  : req.params.userId;
-
-const role = (
-  Array.isArray(req.params.role) ? req.params.role[0] : req.params.role
-)?.toUpperCase();
+    const userId = param(req.params.userId);
+    const role = param(req.params.role)?.toUpperCase();
 
     if (!userId || !role) {
-      return res.status(400).json({
-        success: false,
-        data: null,
-        error: {
-          code: "INVALID_REQUEST",
-          message: "userId and role are required",
-        },
-        requestId: req.requestId,
-      });
+      return errorResponse(req, res, 400, "INVALID_REQUEST", "userId and role are required");
     }
 
     if (role !== "DRIVER" && role !== "GUIDE") {
-      return res.status(400).json({
-        success: false,
-        data: null,
-        error: {
-          code: "INVALID_ROLE",
-          message: "Only DRIVER or GUIDE roles can be verified",
-        },
-        requestId: req.requestId,
-      });
+      return errorResponse(req, res, 400, "INVALID_ROLE", "Only DRIVER or GUIDE roles can be verified");
     }
 
     const parsed = updateRoleVerificationSchema.safeParse(req.body);
-
     if (!parsed.success) {
-      return res.status(400).json({
-        success: false,
-        data: null,
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid request body",
-          details: parsed.error.flatten(),
-        },
-        requestId: req.requestId,
-      });
+      return errorResponse(req, res, 400, "VALIDATION_ERROR", "Invalid request body", parsed.error.flatten());
     }
 
-    const result = await updateRoleVerification(
-      userId,
-      role,
-      parsed.data.verificationStatus
+    const result = await updateRoleVerification(userId, role, parsed.data.verificationStatus);
+
+    return res.status(200).json({ success: true, data: result, error: null, requestId: req.requestId });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "USER_NOT_FOUND") return errorResponse(req, res, 404, error.message, "User not found");
+      if (error.message === "ROLE_NOT_FOUND") return errorResponse(req, res, 404, error.message, "Requested role not found for this user");
+    }
+
+    console.error("ADMIN_ROLE_VERIFICATION_ERROR:", error);
+    return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
+  }
+}
+
+export async function decideVerification(req: Request, res: Response) {
+  const requestId = param(req.params.id);
+  if (!requestId) return errorResponse(req, res, 400, "INVALID_REQUEST", "Verification request id is required");
+
+  const parsed = verificationDecisionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return errorResponse(req, res, 400, "VALIDATION_ERROR", "Invalid verification decision", parsed.error.flatten());
+  }
+
+  try {
+    const data = await decideVerificationRequest(
+      requestId,
+      parsed.data.status,
+      parsed.data.rejectionReason
     );
 
     return res.status(200).json({
       success: true,
-      data: result,
+      data,
       error: null,
       requestId: req.requestId,
     });
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "USER_NOT_FOUND") {
-        return res.status(404).json({
-          success: false,
-          data: null,
-          error: {
-            code: "USER_NOT_FOUND",
-            message: "User not found",
-          },
-          requestId: req.requestId,
-        });
+      if (error.message === "VERIFICATION_REQUEST_NOT_FOUND") {
+        return errorResponse(req, res, 404, error.message, "Verification request not found");
       }
-
-      if (error.message === "ROLE_NOT_FOUND") {
-        return res.status(404).json({
-          success: false,
-          data: null,
-          error: {
-            code: "ROLE_NOT_FOUND",
-            message: "Requested role not found for this user",
-          },
-          requestId: req.requestId,
-        });
+      if (error.message === "INVALID_ROLE") {
+        return errorResponse(req, res, 400, error.message, "Only DRIVER or GUIDE requests can be reviewed");
+      }
+      if (error.message === "INVALID_VERIFICATION_STATE") {
+        return errorResponse(req, res, 409, error.message, "Verification request is not awaiting review");
       }
     }
 
-    console.error("ADMIN_ROLE_VERIFICATION_ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      data: null,
-      error: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Something went wrong",
-      },
-      requestId: req.requestId,
-    });
+    console.error("ADMIN_VERIFICATION_DECISION_ERROR:", error);
+    return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
   }
 }
