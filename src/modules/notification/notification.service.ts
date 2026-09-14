@@ -68,3 +68,17 @@ export async function createNotification(
     },
   });
 }
+
+export async function notifyUser(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Prisma.InputJsonValue,
+) {
+  return createNotification(userId, {
+    type: NotificationType.RIDE_UPDATE,
+    title,
+    body,
+    data,
+  });
+}
