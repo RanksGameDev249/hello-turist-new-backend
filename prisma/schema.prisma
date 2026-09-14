@@ -28,6 +28,7 @@ model User {
   rideAssignments      RideAssignment[]      @relation("RideDriver")
   rideLocations        RideLocation[]        @relation("RideLocationDriver")
   payments             Payment[]             @relation("PaymentPayer")
+  notifications        Notification[]
   @@map("users")
 }
 
@@ -172,11 +173,11 @@ model Vehicle {
   vehicleType        VehicleType   @default(CAR) @map("vehicle_type")
   seatCount          Int           @map("seat_count")
   color              String?
-  imageKey           String?       @map("image_key")
-  isActive            Boolean       @default(true) @map("is_active")
-  createdAt          DateTime      @default(now()) @map("created_at")
-  updatedAt          DateTime      @updatedAt @map("updated_at")
-  driverProfile      DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  imageKey            String?     @map("image_key")
+  isActive            Boolean      @default(true) @map("is_active")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  driverProfile       DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
   @@unique([registrationNumber])
   @@index([driverProfileId])
   @@index([isActive])
@@ -293,6 +294,21 @@ model Refund {
   @@map("refunds")
 }
 
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
 enum VehicleType {
   CAR
   SUV
@@ -384,4 +400,12 @@ enum RefundStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum NotificationType {
+  RIDE_UPDATE
+  PAYMENT_UPDATE
+  VERIFICATION_UPDATE
+  SYSTEM
+  SECURITY
 }
