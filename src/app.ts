@@ -4,6 +4,7 @@ import { requestIdMiddleware } from "./middleware/request-id";
 import authRouter from "./modules/auth/auth.route";
 import usersRouter from "./modules/users/users.route";
 import adminRouter from "./modules/admin/admin.route";
+import adminOperationsRouter from "./modules/admin/admin-operations.route";
 import verificationRouter from "./modules/verification/verification.route";
 import providerRouter from "./modules/provider/provider.route";
 import rideRouter from "./modules/ride/ride.route";
@@ -25,6 +26,7 @@ app.get("/health", (_req, res) => res.status(200).json({ success: true, data: { 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/admin", adminOperationsRouter);
 app.use("/api/v1/verification", verificationRouter);
 app.use("/api/v1/providers", providerRouter);
 app.use("/api/v1/rides", rideRouter);
