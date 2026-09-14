@@ -4,7 +4,7 @@ import type { CreateEmergencyIncidentInput, CreateSharedTripInput, CreateTrusted
 
 async function notify(userId: string, title: string, body: string, data: Prisma.InputJsonValue) {
   try {
-    await prisma.notification.create({ data: { userId, type: NotificationType.SAFETY_ALERT, title, body, data } });
+    await prisma.notification.create({ data: { userId, type: NotificationType.SECURITY, title, body, data } });
   } catch {}
 }
 
