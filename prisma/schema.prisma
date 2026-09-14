@@ -84,7 +84,7 @@ model VerificationRequest {
 
 model VerificationStep {
   id                    String                  @id @default(uuid()) @db.Uuid
-  verificationRequestId String                  @map("verification_request_id") @db.Uuid
+ verificationRequestId String @unique @map("verification_request_id") @db.Uuid
   step                  VerificationStepType
   status                VerificationStepStatus @default(PENDING)
   completedAt           DateTime?               @map("completed_at")
