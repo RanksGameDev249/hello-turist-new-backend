@@ -13,6 +13,7 @@ import safetyRouter from "./modules/safety/safety.route";
 import savedPlaceRouter from "./modules/saved-place/saved-place.route";
 import ratingRouter from "./modules/rating/rating.route";
 import supportRouter from "./modules/support/support.route";
+import promotionRouter from "./modules/promotion/promotion.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
@@ -32,5 +33,6 @@ app.use("/api/v1", safetyRouter);
 app.use("/api/v1/places/saved", savedPlaceRouter);
 app.use("/api/v1", ratingRouter);
 app.use("/api/v1/support/tickets", supportRouter);
+app.use("/api/v1/promotions", promotionRouter);
 app.use(errorHandler);
 export default app;
