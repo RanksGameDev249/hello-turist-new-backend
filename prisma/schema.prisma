@@ -8,18 +8,19 @@ datasource db {
 }
 
 model User {
-  id                String               @id @default(uuid()) @db.Uuid
-  name              String
-  username          String               @unique
-  email             String?              @unique
-  passwordHash      String               @map("password_hash")
-  status            UserStatus           @default(ACTIVE)
-  preferredLanguage String               @default("en") @map("preferred_language")
-  createdAt         DateTime             @default(now()) @map("created_at")
-  updatedAt         DateTime             @updatedAt @map("updated_at")
-  deletedAt         DateTime?            @map("deleted_at")
-  refreshSessions   RefreshSession[]
-  roles             UserRoleAssignment[]
+  id                   String                @id @default(uuid()) @db.Uuid
+  name                 String
+  username             String                @unique
+  email                String?               @unique
+  passwordHash         String                @map("password_hash")
+  status               UserStatus            @default(ACTIVE)
+  preferredLanguage    String                @default("en") @map("preferred_language")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  deletedAt            DateTime?             @map("deleted_at")
+  refreshSessions      RefreshSession[]
+  roles                UserRoleAssignment[]
+  verificationRequests VerificationRequest[]
 
   @@map("users")
 }
@@ -59,6 +60,77 @@ model RefreshTokenReuse {
   @@map("auth_refresh_reuse")
 }
 
+model VerificationRequest {
+  id              String                    @id @default(uuid()) @db.Uuid
+  userId          String                    @map("user_id") @db.Uuid
+  role            UserRole
+  status          VerificationStatus        @default(PENDING)
+  rejectionReason String?                   @map("rejection_reason")
+  submittedAt     DateTime?                 @map("submitted_at")
+  reviewedAt      DateTime?                 @map("reviewed_at")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps           VerificationStep[]
+  documents       VerificationDocument[]
+  liveSession     VerificationLiveSession?
+
+  @@index([userId])
+  @@index([status])
+  @@index([role, status])
+  @@map("verification_requests")
+}
+
+model VerificationStep {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  verificationRequestId String                  @map("verification_request_id") @db.Uuid
+  step                  VerificationStepType
+  status                VerificationStepStatus @default(PENDING)
+  completedAt           DateTime?               @map("completed_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+
+  verificationRequest   VerificationRequest    @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([verificationRequestId, step])
+  @@index([verificationRequestId])
+  @@map("verification_steps")
+}
+
+model VerificationDocument {
+  id                    String             @id @default(uuid()) @db.Uuid
+  verificationRequestId String             @map("verification_request_id") @db.Uuid
+  documentType          String             @map("document_type")
+  privateObjectKey      String             @map("private_object_key")
+  checksum              String?
+  expiryDate            DateTime?          @map("expiry_date")
+  verificationStatus    VerificationStatus @default(PENDING) @map("verification_status")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  verificationRequest   VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+
+  @@index([verificationRequestId])
+  @@index([verificationStatus])
+  @@map("verification_documents")
+}
+
+model VerificationLiveSession {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  verificationRequestId String                  @unique @map("verification_request_id")
+  providerReference     String                  @map("provider_reference")
+  status                VerificationStepStatus @default(PENDING)
+  startedAt             DateTime?               @map("started_at")
+  completedAt           DateTime?               @map("completed_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+
+  verificationRequest  VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+
+  @@map("verification_live_sessions")
+}
+
 enum UserStatus {
   ACTIVE
   BLOCKED
@@ -71,4 +143,28 @@ enum UserRole {
   DRIVER
   GUIDE
   ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_VERIFICATION
+  VERIFIED
+  REJECTED
+  RESUBMITTED
+  SUSPENDED
+  BLOCKED
+}
+
+enum VerificationStepType {
+  PROFILE
+  DOCUMENTS
+  LIVE_SESSION
+  REVIEW
+}
+
+enum VerificationStepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
 }
