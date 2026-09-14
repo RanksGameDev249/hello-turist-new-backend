@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import { authMiddleware } from "../../middleware/auth";
 import { adminMiddleware } from "../../middleware/admin";
-import { updateUserRoleVerification } from "./admin.controller";
+import { decideVerification, updateUserRoleVerification } from "./admin.controller";
 
 const router = Router();
 
@@ -11,6 +11,13 @@ router.patch(
   authMiddleware,
   adminMiddleware,
   updateUserRoleVerification
+);
+
+router.patch(
+  "/verification/requests/:id",
+  authMiddleware,
+  adminMiddleware,
+  decideVerification
 );
 
 export default router;
