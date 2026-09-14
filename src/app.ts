@@ -1,0 +1,29 @@
+    import express from "express";
+    import dotenv from "dotenv";
+    import { requestIdMiddleware } from "./middleware/request-id";
+    import authRouter from "./modules/auth/auth.route";
+    import usersRouter from "./modules/users/users.route";
+
+    dotenv.config();
+
+    const app = express();
+
+    app.use(express.json());
+    app.use(requestIdMiddleware);
+
+    app.get("/health", (_req, res) => {
+    return res.status(200).json({
+        success: true,
+        data: {
+        status: "ok",
+        },
+        error: null,
+        requestId: _req.requestId,
+    });
+    });
+
+    // API v1
+    app.use("/api/v1/auth", authRouter);
+    app.use("/api/v1/users", usersRouter);
+
+    export default app;

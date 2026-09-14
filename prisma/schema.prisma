@@ -7,35 +7,19 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserStatus {
-  ACTIVE
-  BLOCKED
-  SUSPENDED
-  DELETED
-}
-
-enum UserRole {
-  RIDER
-  DRIVER
-  GUIDE
-  ADMIN
-}
-
 model User {
-  id                String     @id @default(uuid()) @db.Uuid
+  id                String               @id @default(uuid()) @db.Uuid
   name              String
-  username          String     @unique
-  email             String?    @unique
-  passwordHash      String     @map("password_hash")
-  status            UserStatus @default(ACTIVE)
-  preferredLanguage String     @default("en") @map("preferred_language")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  roles           UserRoleAssignment[]
-  refreshSessions RefreshSession[]
+  username          String               @unique
+  email             String?              @unique
+  passwordHash      String               @map("password_hash")
+  status            UserStatus           @default(ACTIVE)
+  preferredLanguage String               @default("en") @map("preferred_language")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  deletedAt         DateTime?            @map("deleted_at")
+  refreshSessions   RefreshSession[]
+  roles             UserRoleAssignment[]
 
   @@map("users")
 }
@@ -46,8 +30,7 @@ model UserRoleAssignment {
   role               UserRole
   verificationStatus String   @default("PENDING") @map("verification_status")
   createdAt          DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, role])
   @@index([userId])
@@ -62,8 +45,7 @@ model RefreshSession {
   createdAt      DateTime  @default(now()) @map("created_at")
   revokedAt      DateTime? @map("revoked_at")
   replacedByHash String?   @map("replaced_by_hash")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -75,4 +57,18 @@ model RefreshTokenReuse {
   detectedAt DateTime @default(now()) @map("detected_at")
 
   @@map("auth_refresh_reuse")
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  SUSPENDED
+  DELETED
+}
+
+enum UserRole {
+  RIDER
+  DRIVER
+  GUIDE
+  ADMIN
 }

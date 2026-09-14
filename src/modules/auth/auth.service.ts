@@ -1,5 +1,16 @@
+import crypto from "crypto";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
 import { prisma } from "../../core/prisma";
+
+function generateRefreshToken() {
+  return crypto.randomBytes(64).toString("hex");
+}
+
+function hashToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 export async function registerUser(input: {
   name: string;
@@ -50,4 +61,198 @@ export async function registerUser(input: {
   });
 
   return user;
+}
+
+export async function loginUser(input: {
+  identifier: string;
+  password: string;
+}) {
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        {
+          username: input.identifier,
+        },
+        {
+          email: input.identifier,
+        },
+      ],
+    },
+  });
+
+  if (!user) {
+    throw new Error("INVALID_CREDENTIALS");
+  }
+
+  const passwordMatches = await bcrypt.compare(
+    input.password,
+    user.passwordHash
+  );
+
+  if (!passwordMatches) {
+    throw new Error("INVALID_CREDENTIALS");
+  }
+
+  if (user.status !== "ACTIVE") {
+    throw new Error("ACCOUNT_NOT_ACTIVE");
+  }
+
+  const accessToken = jwt.sign(
+    {
+      sub: user.id,
+      username: user.username,
+    },
+    process.env.ACCESS_TOKEN_SECRET!,
+    {
+      expiresIn: "15m",
+    }
+  );
+
+  const refreshToken = generateRefreshToken();
+
+  const refreshTokenHash = hashToken(refreshToken);
+
+  const expiresAt = new Date(
+    Date.now() + 30 * 24 * 60 * 60 * 1000
+  );
+
+  await prisma.refreshSession.create({
+    data: {
+      tokenHash: refreshTokenHash,
+      userId: user.id,
+      expiresAt,
+    },
+  });
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      status: user.status,
+      preferredLanguage: user.preferredLanguage,
+    },
+  };
+}
+
+export async function refreshAccessToken(refreshToken: string) {
+  const tokenHash = hashToken(refreshToken);
+
+  const session = await prisma.refreshSession.findUnique({
+    where: {
+      tokenHash,
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!session) {
+    throw new Error("INVALID_REFRESH_TOKEN");
+  }
+
+  if (session.revokedAt) {
+    await prisma.refreshTokenReuse.create({
+      data: {
+        tokenHash,
+      },
+    });
+
+    throw new Error("REFRESH_TOKEN_REVOKED");
+  }
+
+  if (session.expiresAt <= new Date()) {
+    throw new Error("REFRESH_TOKEN_EXPIRED");
+  }
+
+  if (session.user.status !== "ACTIVE") {
+    throw new Error("ACCOUNT_NOT_ACTIVE");
+  }
+
+  const newAccessToken = jwt.sign(
+    {
+      sub: session.user.id,
+      username: session.user.username,
+    },
+    process.env.ACCESS_TOKEN_SECRET!,
+    {
+      expiresIn: "15m",
+    }
+  );
+
+  const newRefreshToken = generateRefreshToken();
+  const newRefreshTokenHash = hashToken(newRefreshToken);
+
+  const newExpiresAt = new Date(
+    Date.now() + 30 * 24 * 60 * 60 * 1000
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.refreshSession.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        revokedAt: new Date(),
+        replacedByHash: newRefreshTokenHash,
+      },
+    });
+
+    await tx.refreshSession.create({
+      data: {
+        tokenHash: newRefreshTokenHash,
+        userId: session.user.id,
+        expiresAt: newExpiresAt,
+      },
+    });
+  });
+
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  };
+}
+
+export async function logoutUser(refreshToken: string) {
+  const tokenHash = hashToken(refreshToken);
+
+  const session = await prisma.refreshSession.findUnique({
+    where: {
+      tokenHash,
+    },
+  });
+
+  if (!session) {
+    throw new Error("INVALID_REFRESH_TOKEN");
+  }
+
+  if (!session.revokedAt) {
+    await prisma.refreshSession.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  }
+
+  return true;
+}
+
+export async function logoutAllUserSessions(userId: string) {
+  await prisma.refreshSession.updateMany({
+    where: {
+      userId,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+
+  return true;
 }
