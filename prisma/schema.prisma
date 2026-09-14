@@ -60,7 +60,7 @@ model RefreshSession {
 
 model RefreshTokenReuse {
   tokenHash  String   @id @map("token_hash")
-  detectedAt DateTime @default(now())
+  detectedAt DateTime @default(now()) @map("detected_at")
   @@map("auth_refresh_reuse")
 }
 
@@ -221,7 +221,7 @@ model RideAssignment {
   acceptedAt DateTime?            @map("accepted_at")
   rejectedAt DateTime?            @map("rejected_at")
   createdAt  DateTime             @default(now()) @map("created_at")
-  updatedAt  DateTime             @updatedAt @map("updated_at")
+  updatedAt  DateTime              @updatedAt @map("updated_at")
   ride       Ride                 @relation(fields: [rideId], references: [id], onDelete: Cascade)
   driver     User                 @relation("RideDriver", fields: [driverId], references: [id], onDelete: Cascade)
   @@index([rideId, status])
@@ -258,22 +258,22 @@ model RideLocation {
 }
 
 model Payment {
-  id               String        @id @default(uuid()) @db.Uuid
-  rideId           String        @unique @map("ride_id") @db.Uuid
-  payerId          String        @map("payer_id") @db.Uuid
-  amount           Decimal       @db.Decimal(12, 2)
-  currency         String        @default("INR") @db.VarChar(3)
+  id               String         @id @default(uuid()) @db.Uuid
+  rideId           String         @unique @map("ride_id") @db.Uuid
+  payerId          String         @map("payer_id") @db.Uuid
+  amount           Decimal        @db.Decimal(12, 2)
+  currency         String         @default("INR") @db.VarChar(3)
   provider         String
-  providerPaymentId String?      @unique @map("provider_payment_id")
+  providerPaymentId String?       @unique @map("provider_payment_id")
   status            PaymentStatus @default(PENDING)
-  metadata         Json?
-  paidAt           DateTime?     @map("paid_at")
-  failedAt         DateTime?     @map("failed_at")
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
-  ride             Ride          @relation(fields: [rideId], references: [id], onDelete: Cascade)
-  payer            User          @relation("PaymentPayer", fields: [payerId], references: [id], onDelete: Cascade)
-  refunds          Refund[]
+  metadata          Json?
+  paidAt            DateTime?     @map("paid_at")
+  failedAt          DateTime?     @map("failed_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  ride              Ride          @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  payer             User          @relation("PaymentPayer", fields: [payerId], references: [id], onDelete: Cascade)
+  refunds           Refund[]
   @@index([payerId, createdAt])
   @@index([status])
   @@map("payments")
@@ -310,44 +310,44 @@ model Notification {
 }
 
 model TrustedContact {
-  id            String                     @id @default(uuid()) @db.Uuid
-  ownerId       String                     @map("owner_id") @db.Uuid
+  id            String                      @id @default(uuid()) @db.Uuid
+  ownerId       String                      @map("owner_id") @db.Uuid
   name          String
   phone         String
   consentStatus TrustedContactConsentStatus @default(PENDING) @map("consent_status")
-  createdAt     DateTime                   @default(now()) @map("created_at")
-  updatedAt     DateTime                   @updatedAt @map("updated_at")
+  createdAt     DateTime                    @default(now()) @map("created_at")
+  updatedAt     DateTime                    @updatedAt @map("updated_at")
   @@index([ownerId])
   @@index([ownerId, consentStatus])
   @@map("trusted_contacts")
 }
 
 model SharedTrip {
-  id        String   @id @default(uuid()) @db.Uuid
-  rideId    String   @map("ride_id") @db.Uuid
-  contactId String   @map("contact_id") @db.Uuid
-  expiresAt DateTime @map("expires_at")
+  id        String    @id @default(uuid()) @db.Uuid
+  rideId    String    @map("ride_id") @db.Uuid
+  contactId String    @map("contact_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
   @@index([rideId])
   @@index([contactId, expiresAt])
   @@map("shared_trips")
 }
 
 model EmergencyIncident {
-  id                String                @id @default(uuid()) @db.Uuid
-  riderId           String                @map("rider_id") @db.Uuid
-  rideId            String?               @map("ride_id") @db.Uuid
+  id                String                 @id @default(uuid()) @db.Uuid
+  riderId           String                 @map("rider_id") @db.Uuid
+  rideId            String?                @map("ride_id") @db.Uuid
   category          String
   state             EmergencyIncidentState @default(TRIGGERED)
-  triggerSource     String                @map("trigger_source")
-  locationSnapshot  Json?                 @map("location_snapshot")
-  heartbeatSnapshot Json?                 @map("heartbeat_snapshot")
-  createdAt         DateTime              @default(now()) @map("created_at")
-  acknowledgedAt    DateTime?             @map("acknowledged_at")
-  escalatedAt       DateTime?             @map("escalated_at")
-  resolvedAt        DateTime?             @map("resolved_at")
-  updatedAt         DateTime              @updatedAt @map("updated_at")
+  triggerSource     String                 @map("trigger_source")
+  locationSnapshot  Json?                  @map("location_snapshot")
+  heartbeatSnapshot Json?                  @map("heartbeat_snapshot")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  acknowledgedAt    DateTime?              @map("acknowledged_at")
+  escalatedAt       DateTime?              @map("escalated_at")
+  resolvedAt        DateTime?              @map("resolved_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
   @@index([riderId, createdAt])
   @@index([rideId])
   @@index([state, createdAt])
@@ -391,119 +391,17 @@ model SavedPlace {
   @@map("saved_places")
 }
 
-enum VehicleType {
-  CAR
-  SUV
-  SEDAN
-  HATCHBACK
-  VAN
-  BUS
-  OTHER
-}
-
-enum UserStatus {
-  ACTIVE
-  BLOCKED
-  SUSPENDED
-  DELETED
-}
-
-enum UserRole {
-  RIDER
-  DRIVER
-  GUIDE
-  ADMIN
-}
-
-enum VerificationStatus {
-  PENDING
-  UNDER_VERIFICATION
-  VERIFIED
-  REJECTED
-  RESUBMITTED
-  SUSPENDED
-  BLOCKED
-}
-
-enum VerificationStepType {
-  PROFILE
-  DOCUMENTS
-  LIVE_SESSION
-  REVIEW
-}
-
-enum VerificationStepStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  FAILED
-}
-
-enum RideStatus {
-  REQUESTED
-  SEARCHING
-  ASSIGNED
-  DRIVER_ARRIVING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum RideAssignmentStatus {
-  OFFERED
-  ACCEPTED
-  REJECTED
-  EXPIRED
-}
-
-enum RideEventType {
-  CREATED
-  SEARCH_STARTED
-  DRIVER_ASSIGNED
-  DRIVER_ACCEPTED
-  DRIVER_REJECTED
-  DRIVER_ARRIVING
-  RIDE_STARTED
-  RIDE_COMPLETED
-  CANCELLED
-  LOCATION_RECORDED
-}
-
-enum PaymentStatus {
-  PENDING
-  AUTHORIZED
-  CAPTURED
-  FAILED
-  REFUNDED
-}
-
-enum RefundStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-
-enum NotificationType {
-  RIDE_UPDATE
-  PAYMENT_UPDATE
-  VERIFICATION_UPDATE
-  SYSTEM
-  SECURITY
-}
-
-enum TrustedContactConsentStatus {
-  PENDING
-  ACCEPTED
-  REVOKED
-}
-
-enum EmergencyIncidentState {
-  TRIGGERED
-  ACKNOWLEDGED
-  RESPONDER_ASSIGNED
-  RESPONDER_EN_ROUTE
-  RESPONDER_ARRIVED
-  ESCALATED
-  RESOLVED
-}
+enum VehicleType { CAR SUV SEDAN HATCHBACK VAN BUS OTHER }
+enum UserStatus { ACTIVE BLOCKED SUSPENDED DELETED }
+enum UserRole { RIDER DRIVER GUIDE ADMIN }
+enum VerificationStatus { PENDING UNDER_VERIFICATION VERIFIED REJECTED RESUBMITTED SUSPENDED BLOCKED }
+enum VerificationStepType { PROFILE DOCUMENTS LIVE_SESSION REVIEW }
+enum VerificationStepStatus { PENDING IN_PROGRESS COMPLETED FAILED }
+enum RideStatus { REQUESTED SEARCHING ASSIGNED DRIVER_ARRIVING IN_PROGRESS COMPLETED CANCELLED }
+enum RideAssignmentStatus { OFFERED ACCEPTED REJECTED EXPIRED }
+enum RideEventType { CREATED SEARCH_STARTED DRIVER_ASSIGNED DRIVER_ACCEPTED DRIVER_REJECTED DRIVER_ARRIVING RIDE_STARTED RIDE_COMPLETED CANCELLED LOCATION_RECORDED }
+enum PaymentStatus { PENDING AUTHORIZED CAPTURED FAILED REFUNDED }
+enum RefundStatus { PENDING PROCESSING COMPLETED FAILED }
+enum NotificationType { RIDE_UPDATE PAYMENT_UPDATE VERIFICATION_UPDATE SYSTEM SECURITY }
+enum TrustedContactConsentStatus { PENDING ACCEPTED REVOKED }
+enum EmergencyIncidentState { TRIGGERED ACKNOWLEDGED RESPONDER_ASSIGNED RESPONDER_EN_ROUTE RESPONDER_ARRIVED ESCALATED RESOLVED }
