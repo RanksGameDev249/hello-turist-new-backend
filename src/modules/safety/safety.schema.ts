@@ -21,3 +21,18 @@ export const createEmergencyIncidentSchema = z.object({
   }).optional(),
   heartbeat: z.record(z.string(), z.unknown()).optional(),
 });
+
+export const rideHeartbeatSchema = z.object({
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+  accuracy: z.number().nonnegative().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
+}).refine(
+  (value) => (value.latitude !== undefined && value.longitude !== undefined) || value.payload !== undefined,
+  { message: "Heartbeat must contain a location or payload" },
+);
+
+export type CreateTrustedContactInput = z.infer<typeof createTrustedContactSchema>;
+export type CreateSharedTripInput = z.infer<typeof createSharedTripSchema>;
+export type CreateEmergencyIncidentInput = z.infer<typeof createEmergencyIncidentSchema>;
+export type RideHeartbeatInput = z.infer<typeof rideHeartbeatSchema>;
