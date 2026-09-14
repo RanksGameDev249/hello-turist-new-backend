@@ -1,0 +1,46 @@
+import { z } from "zod";
+
+const coordinate = z.number().min(-180).max(180);
+
+export const createRideSchema = z.object({
+  pickupAddress: z.string().trim().min(2).max(500),
+  pickupLatitude: coordinate.refine((v) => v >= -90 && v <= 90, "Invalid latitude"),
+  pickupLongitude: coordinate,
+  dropoffAddress: z.string().trim().min(2).max(500),
+  dropoffLatitude: coordinate.refine((v) => v >= -90 && v <= 90, "Invalid latitude"),
+  dropoffLongitude: coordinate,
+  scheduledAt: z.string().datetime().optional(),
+  notes: z.string().trim().max(1000).optional(),
+});
+
+export const cancelRideSchema = z.object({
+  reason: z.string().trim().min(2).max(500),
+});
+
+export const assignRideSchema = z.object({
+  driverId: z.string().uuid(),
+});
+
+export const locationSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().min(0).max(10000).optional(),
+  recordedAt: z.string().datetime().optional(),
+});
+
+export const rideEventSchema = z.object({
+  type: z.enum(["DRIVER_ARRIVING", "RIDE_STARTED", "RIDE_COMPLETED"]),
+  payload: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const rideListQuerySchema = z.object({
+  status: z.enum(["REQUESTED", "SEARCHING", "ASSIGNED", "DRIVER_ARRIVING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z.string().uuid().optional(),
+});
+
+export type CreateRideInput = z.infer<typeof createRideSchema>;
+export type CancelRideInput = z.infer<typeof cancelRideSchema>;
+export type AssignRideInput = z.infer<typeof assignRideSchema>;
+export type LocationInput = z.infer<typeof locationSchema>;
+export type RideEventInput = z.infer<typeof rideEventSchema>;
