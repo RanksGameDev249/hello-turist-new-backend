@@ -59,7 +59,7 @@ model RefreshSession {
 
 model RefreshTokenReuse {
   tokenHash  String   @id @map("token_hash")
-  detectedAt DateTime @default(now())
+  detectedAt DateTime @default(now()) @map("detected_at")
   @@map("auth_refresh_reuse")
 }
 
@@ -173,7 +173,7 @@ model Vehicle {
   seatCount          Int           @map("seat_count")
   color              String?
   imageKey           String?       @map("image_key")
-  isActive           Boolean       @default(true) @map("is_active")
+  isActive            Boolean       @default(true) @map("is_active")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
   driverProfile      DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
