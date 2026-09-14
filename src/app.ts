@@ -8,6 +8,7 @@ import verificationRouter from "./modules/verification/verification.route";
 import providerRouter from "./modules/provider/provider.route";
 import rideRouter from "./modules/ride/ride.route";
 import paymentRouter from "./modules/payment/payment.route";
+import notificationRouter from "./modules/notification/notification.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.use("/api/v1/verification", verificationRouter);
 app.use("/api/v1/providers", providerRouter);
 app.use("/api/v1/rides", rideRouter);
 app.use("/api/v1/payments", paymentRouter);
+app.use("/api/v1/notifications", notificationRouter);
 
 app.use(errorHandler);
 export default app;
