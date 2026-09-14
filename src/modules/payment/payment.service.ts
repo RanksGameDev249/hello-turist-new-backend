@@ -1,5 +1,6 @@
 import { prisma } from "../../core/prisma";
 import type { CreatePaymentInput, CreateRefundInput, PaymentWebhookInput } from "./payment.schema";
+import { Prisma } from "../../generated/prisma/client";
 
 const paymentInclude = {
   refunds: { orderBy: { createdAt: "desc" as const } },
@@ -22,7 +23,7 @@ export async function createPayment(userId: string, input: CreatePaymentInput) {
       amount: input.amount,
       currency: input.currency,
       provider: input.provider,
-      metadata: input.metadata,
+      metadata: input.metadata as Prisma.InputJsonValue | undefined,
     },
     include: paymentInclude,
   });
@@ -70,9 +71,9 @@ export async function applyPaymentWebhook(input: PaymentWebhookInput) {
   if (payment.status === "REFUNDED") return payment;
   if (payment.status === input.status) return payment;
 
-  const data: { status: "AUTHORIZED" | "CAPTURED" | "FAILED"; paidAt?: Date; failedAt?: Date; metadata?: object } = {
+  const data: { status: "AUTHORIZED" | "CAPTURED" | "FAILED"; paidAt?: Date; failedAt?: Date; metadata?: Prisma.InputJsonValue } = {
     status: input.status,
-    ...(input.metadata ? { metadata: input.metadata } : {}),
+    ...(input.metadata ? { metadata: input.metadata as Prisma.InputJsonValue } : {}),
   };
   if (input.status === "CAPTURED") data.paidAt = new Date();
   if (input.status === "FAILED") data.failedAt = new Date();
