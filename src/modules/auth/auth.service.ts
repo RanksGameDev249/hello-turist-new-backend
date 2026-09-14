@@ -234,16 +234,31 @@ export async function logoutUser(refreshToken: string) {
     throw new Error("INVALID_REFRESH_TOKEN");
   }
 
-  if (!session.revokedAt) {
-    await prisma.refreshSession.update({
+ if (session.revokedAt) {
+  await prisma.$transaction(async (tx) => {
+    await tx.refreshTokenReuse.upsert({
       where: {
-        id: session.id,
+        tokenHash,
+      },
+      update: {},
+      create: {
+        tokenHash,
+      },
+    });
+
+    await tx.refreshSession.updateMany({
+      where: {
+        userId: session.userId,
+        revokedAt: null,
       },
       data: {
         revokedAt: new Date(),
       },
     });
-  }
+  });
+
+  throw new Error("REFRESH_TOKEN_REVOKED");
+}
 
   return true;
 }
@@ -257,6 +272,50 @@ export async function logoutAllUserSessions(userId: string) {
     data: {
       revokedAt: new Date(),
     },
+  });
+
+  return true;
+}
+
+export async function deleteUserAccount(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("USER_NOT_FOUND");
+  }
+
+  if (user.status === "DELETED") {
+    throw new Error("ACCOUNT_ALREADY_DELETED");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        status: "DELETED",
+        deletedAt: new Date(),
+      },
+    });
+
+    await tx.refreshSession.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
   });
 
   return true;

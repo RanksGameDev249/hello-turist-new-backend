@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+import { prisma } from "../core/prisma";
+
 declare global {
   namespace Express {
     interface Request {
@@ -12,7 +14,7 @@ declare global {
   }
 }
 
-export function authMiddleware(
+export async function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
@@ -54,9 +56,32 @@ export function authMiddleware(
       });
     }
 
+    const user = await prisma.user.findUnique({
+      where: {
+        id: decoded.sub,
+      },
+      select: {
+        id: true,
+        username: true,
+        status: true,
+      },
+    });
+
+    if (!user || user.status !== "ACTIVE") {
+      return res.status(401).json({
+        success: false,
+        data: null,
+        error: {
+          code: "ACCOUNT_NOT_ACTIVE",
+          message: "Account is not active",
+        },
+        requestId: req.requestId,
+      });
+    }
+
     req.user = {
-      id: decoded.sub,
-      username: decoded.username,
+      id: user.id,
+      username: user.username,
     };
 
     next();

@@ -10,8 +10,9 @@ import {
   registerUser,
   loginUser,
   refreshAccessToken,
-   logoutUser,
+  logoutUser,
   logoutAllUserSessions,
+  deleteUserAccount,
 } from "./auth.service";
 
 export async function register(req: Request, res: Response) {
@@ -287,6 +288,59 @@ export async function logoutAll(
     });
   } catch (error) {
     console.error("LOGOUT_ALL_ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Something went wrong",
+      },
+      requestId: req.requestId,
+    });
+  }
+}
+
+export async function deleteAccount(req: Request, res: Response) {
+  try {
+    await deleteUserAccount(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        message: "Account deleted successfully",
+      },
+      error: null,
+      requestId: req.requestId,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "USER_NOT_FOUND") {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: {
+            code: "USER_NOT_FOUND",
+            message: "User not found",
+          },
+          requestId: req.requestId,
+        });
+      }
+
+      if (error.message === "ACCOUNT_ALREADY_DELETED") {
+        return res.status(409).json({
+          success: false,
+          data: null,
+          error: {
+            code: "ACCOUNT_ALREADY_DELETED",
+            message: "Account has already been deleted",
+          },
+          requestId: req.requestId,
+        });
+      }
+    }
+
+    console.error("DELETE_ACCOUNT_ERROR:", error);
 
     return res.status(500).json({
       success: false,
