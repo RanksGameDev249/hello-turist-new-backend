@@ -10,6 +10,7 @@ import rideRouter from "./modules/ride/ride.route";
 import paymentRouter from "./modules/payment/payment.route";
 import notificationRouter from "./modules/notification/notification.route";
 import safetyRouter from "./modules/safety/safety.route";
+import savedPlaceRouter from "./modules/saved-place/saved-place.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.use("/api/v1/rides", rideRouter);
 app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1", safetyRouter);
+app.use("/api/v1/places/saved", savedPlaceRouter);
 
 app.use(errorHandler);
 export default app;
