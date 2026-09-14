@@ -1,4 +1,5 @@
 import { prisma } from "../../core/prisma";
+import { NotificationType, Prisma } from "../../generated/prisma/client";
 
 type ProviderRole = "DRIVER" | "GUIDE";
 type LiveSessionStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
@@ -13,6 +14,27 @@ function assertProviderRole(role: string): asserts role is ProviderRole {
 
 function isEditableStatus(status: string) {
   return status === "PENDING" || status === "REJECTED" || status === "RESUBMITTED";
+}
+
+async function sendVerificationNotification(
+  userId: string,
+  title: string,
+  body: string,
+  data: Prisma.InputJsonValue,
+) {
+  try {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: NotificationType.VERIFICATION_UPDATE,
+        title,
+        body,
+        data,
+      },
+    });
+  } catch {
+    // Notification delivery must never break verification operations.
+  }
 }
 
 async function getRequestForUser(userId: string, requestId: string) {
@@ -270,6 +292,13 @@ export async function resubmitVerification(userId: string, requestId: string) {
     });
   });
 
+  await sendVerificationNotification(
+    userId,
+    "Verification resubmitted",
+    "Your verification request has been resubmitted for review.",
+    { event: "VERIFICATION_RESUBMITTED", verificationRequestId: requestId, role: request.role },
+  );
+
   return toPublicRequest(result as Awaited<ReturnType<typeof getRequestForUser>>);
 }
 
@@ -323,6 +352,13 @@ export async function submitVerificationForReview(userId: string, requestId: str
       },
     });
   });
+
+  await sendVerificationNotification(
+    userId,
+    "Verification submitted",
+    "Your verification request has been submitted and is now under review.",
+    { event: "VERIFICATION_SUBMITTED", verificationRequestId: requestId, role: request.role },
+  );
 
   return toPublicRequest(updated as Awaited<ReturnType<typeof getRequestForUser>>);
 }
