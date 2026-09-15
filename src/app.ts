@@ -12,18 +12,14 @@ import notificationRouter from "./modules/notification/notification.route";
 import safetyRouter from "./modules/safety/safety.route";
 import savedPlaceRouter from "./modules/saved-place/saved-place.route";
 import ratingRouter from "./modules/rating/rating.route";
+import supportRouter from "./modules/support/support.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
-
 const app = express();
 app.use(express.json());
 app.use(requestIdMiddleware);
-
-app.get("/health", (_req, res) => {
-  return res.status(200).json({ success: true, data: { status: "ok" }, error: null, requestId: _req.requestId });
-});
-
+app.get("/health", (_req, res) => res.status(200).json({ success: true, data: { status: "ok" }, error: null, requestId: _req.requestId }));
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/admin", adminRouter);
@@ -35,6 +31,6 @@ app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1", safetyRouter);
 app.use("/api/v1/places/saved", savedPlaceRouter);
 app.use("/api/v1", ratingRouter);
-
+app.use("/api/v1/support/tickets", supportRouter);
 app.use(errorHandler);
 export default app;
