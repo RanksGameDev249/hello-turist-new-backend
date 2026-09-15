@@ -118,14 +118,14 @@ model VerificationRequest {
 }
 
 model VerificationStep {
-  id                   String                  @id @default(uuid()) @db.Uuid
-  verificationRequestId String                 @map("verification_request_id") @db.Uuid
-  step                 VerificationStepType
-  status               VerificationStepStatus @default(PENDING)
-  completedAt          DateTime?               @map("completed_at")
-  createdAt            DateTime                @default(now()) @map("created_at")
-  updatedAt            DateTime                @updatedAt @map("updated_at")
-  verificationRequest  VerificationRequest    @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+  id                    String                  @id @default(uuid()) @db.Uuid
+  verificationRequestId String                  @map("verification_request_id") @db.Uuid
+  step                  VerificationStepType
+  status                VerificationStepStatus @default(PENDING)
+  completedAt           DateTime?               @map("completed_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  verificationRequest   VerificationRequest    @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
 
   @@unique([verificationRequestId, step])
   @@index([verificationRequestId])
@@ -133,16 +133,16 @@ model VerificationStep {
 }
 
 model VerificationDocument {
-  id                   String             @id @default(uuid()) @db.Uuid
-  verificationRequestId String            @map("verification_request_id") @db.Uuid
-  documentType         String             @map("document_type")
-  privateObjectKey     String             @map("private_object_key")
-  checksum             String?
-  expiryDate           DateTime?          @map("expiry_date")
-  verificationStatus   VerificationStatus @default(PENDING) @map("verification_status")
-  createdAt            DateTime           @default(now()) @map("created_at")
-  updatedAt            DateTime           @updatedAt @map("updated_at")
-  verificationRequest  VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+  id                    String              @id @default(uuid()) @db.Uuid
+  verificationRequestId String              @map("verification_request_id") @db.Uuid
+  documentType          String              @map("document_type")
+  privateObjectKey      String              @map("private_object_key")
+  checksum              String?
+  expiryDate            DateTime?           @map("expiry_date")
+  verificationStatus    VerificationStatus  @default(PENDING) @map("verification_status")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  verificationRequest   VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
 
   @@index([verificationRequestId])
   @@index([verificationStatus])
@@ -150,14 +150,14 @@ model VerificationDocument {
 }
 
 model VerificationLiveSession {
-  id                   String                  @id @default(uuid()) @db.Uuid
-  verificationRequestId String                 @unique @map("verification_request_id") @db.Uuid
-  providerReference    String                  @map("provider_reference")
-  status               VerificationStepStatus @default(PENDING)
-  startedAt            DateTime?               @map("started_at")
-  completedAt          DateTime?               @map("completed_at")
-  createdAt            DateTime                @default(now()) @map("created_at")
-  updatedAt            DateTime                @updatedAt @map("updated_at")
+  id                    String                  @id @default(uuid()) @db.Uuid
+  verificationRequestId String                  @unique @map("verification_request_id") @db.Uuid
+  providerReference     String                  @map("provider_reference")
+  status                VerificationStepStatus @default(PENDING)
+  startedAt             DateTime?               @map("started_at")
+  completedAt           DateTime?               @map("completed_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
   verificationRequest  VerificationRequest    @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
 
   @@map("verification_live_sessions")
@@ -170,7 +170,7 @@ model DriverProfile {
   experienceYears Int?         @map("experience_years")
   serviceCity     String?      @map("service_city")
   serviceArea     String?      @map("service_area")
-  profileImageKey  String?      @map("profile_image_key")
+  profileImageKey String?      @map("profile_image_key")
   isAvailable     Boolean      @default(false) @map("is_available")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
@@ -188,7 +188,7 @@ model GuideProfile {
   bio             String?
   experienceYears Int?     @map("experience_years")
   serviceCity     String?  @map("service_city")
-  profileImageKey  String?  @map("profile_image_key")
+  profileImageKey String?  @map("profile_image_key")
   languages       String[] @default([])
   specialties     String[] @default([])
   isAvailable     Boolean  @default(false) @map("is_available")
@@ -202,20 +202,20 @@ model GuideProfile {
 }
 
 model Vehicle {
-  id               String        @id @default(uuid()) @db.Uuid
-  driverProfileId  String        @map("driver_profile_id") @db.Uuid
-  make             String
-  model            String
-  year             Int?
-  registrationNumber String      @unique @map("registration_number")
-  vehicleType      VehicleType   @default(CAR) @map("vehicle_type")
-  seatCount        Int           @map("seat_count")
-  color            String?
-  imageKey         String?       @map("image_key")
-  isActive         Boolean       @default(true) @map("is_active")
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
-  driverProfile    DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  id                 String        @id @default(uuid()) @db.Uuid
+  driverProfileId    String        @map("driver_profile_id") @db.Uuid
+  make               String
+  model              String
+  year               Int?
+  registrationNumber String        @unique @map("registration_number")
+  vehicleType        VehicleType   @default(CAR) @map("vehicle_type")
+  seatCount          Int           @map("seat_count")
+  color              String?
+  imageKey           String?       @map("image_key")
+  isActive           Boolean       @default(true) @map("is_active")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  driverProfile      DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
 
   @@index([driverProfileId])
   @@index([isActive])
@@ -223,27 +223,27 @@ model Vehicle {
 }
 
 model Ride {
-  id                  String          @id @default(uuid()) @db.Uuid
-  riderId             String          @map("rider_id") @db.Uuid
-  pickupAddress       String          @map("pickup_address")
-  pickupLatitude      Decimal         @map("pickup_latitude") @db.Decimal(10, 7)
-  pickupLongitude     Decimal         @map("pickup_longitude") @db.Decimal(10, 7)
-  dropoffAddress      String          @map("dropoff_address")
-  dropoffLatitude     Decimal         @map("dropoff_latitude") @db.Decimal(10, 7)
-  dropoffLongitude    Decimal         @map("dropoff_longitude") @db.Decimal(10, 7)
-  scheduledAt         DateTime?       @map("scheduled_at")
-  status              RideStatus      @default(REQUESTED)
-  notes               String?
-  cancelledAt         DateTime?       @map("cancelled_at")
-  cancellationReason  String?         @map("cancellation_reason")
-  completedAt         DateTime?       @map("completed_at")
-  createdAt           DateTime        @default(now()) @map("created_at")
-  updatedAt           DateTime        @updatedAt @map("updated_at")
-  rider               User            @relation("RideRider", fields: [riderId], references: [id], onDelete: Cascade)
-  assignments         RideAssignment[]
-  events              RideEvent[]
-  locations           RideLocation[]
-  payment             Payment?
+  id                 String           @id @default(uuid()) @db.Uuid
+  riderId            String           @map("rider_id") @db.Uuid
+  pickupAddress      String           @map("pickup_address")
+  pickupLatitude     Decimal          @map("pickup_latitude") @db.Decimal(10, 7)
+  pickupLongitude    Decimal          @map("pickup_longitude") @db.Decimal(10, 7)
+  dropoffAddress     String           @map("dropoff_address")
+  dropoffLatitude    Decimal          @map("dropoff_latitude") @db.Decimal(10, 7)
+  dropoffLongitude   Decimal          @map("dropoff_longitude") @db.Decimal(10, 7)
+  scheduledAt        DateTime?        @map("scheduled_at")
+  status             RideStatus       @default(REQUESTED)
+  notes              String?
+  cancelledAt        DateTime?        @map("cancelled_at")
+  cancellationReason String?          @map("cancellation_reason")
+  completedAt        DateTime?        @map("completed_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  rider              User             @relation("RideRider", fields: [riderId], references: [id], onDelete: Cascade)
+  assignments        RideAssignment[]
+  events             RideEvent[]
+  locations          RideLocation[]
+  payment            Payment?
 
   @@index([riderId, createdAt])
   @@index([status])
@@ -252,17 +252,17 @@ model Ride {
 }
 
 model RideAssignment {
-  id          String               @id @default(uuid()) @db.Uuid
-  rideId      String               @map("ride_id") @db.Uuid
-  driverId    String               @map("driver_id") @db.Uuid
-  status      RideAssignmentStatus @default(OFFERED)
-  assignedAt  DateTime             @default(now()) @map("assigned_at")
-  acceptedAt  DateTime?            @map("accepted_at")
-  rejectedAt  DateTime?            @map("rejected_at")
-  createdAt   DateTime             @default(now()) @map("created_at")
-  updatedAt   DateTime             @updatedAt @map("updated_at")
-  ride        Ride                 @relation(fields: [rideId], references: [id], onDelete: Cascade)
-  driver      User                 @relation("RideDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  id         String               @id @default(uuid()) @db.Uuid
+  rideId     String               @map("ride_id") @db.Uuid
+  driverId   String               @map("driver_id") @db.Uuid
+  status     RideAssignmentStatus @default(OFFERED)
+  assignedAt DateTime             @default(now()) @map("assigned_at")
+  acceptedAt DateTime?            @map("accepted_at")
+  rejectedAt DateTime?            @map("rejected_at")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+  ride       Ride                 @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  driver     User                 @relation("RideDriver", fields: [driverId], references: [id], onDelete: Cascade)
 
   @@index([rideId, status])
   @@index([driverId, status])
@@ -270,14 +270,14 @@ model RideAssignment {
 }
 
 model RideEvent {
-  id          String     @id @default(uuid()) @db.Uuid
-  rideId      String     @map("ride_id") @db.Uuid
-  actorUserId String?    @map("actor_user_id") @db.Uuid
+  id          String        @id @default(uuid()) @db.Uuid
+  rideId      String        @map("ride_id") @db.Uuid
+  actorUserId String?       @map("actor_user_id") @db.Uuid
   type        RideEventType
   payload     Json?
-  createdAt   DateTime   @default(now()) @map("created_at")
-  ride        Ride       @relation(fields: [rideId], references: [id], onDelete: Cascade)
-  actor       User?      @relation("RideEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  ride        Ride          @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  actor       User?         @relation("RideEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([rideId, createdAt])
   @@map("ride_events")
@@ -369,12 +369,12 @@ model TrustedContact {
 }
 
 model SharedTrip {
-  id        String   @id @default(uuid()) @db.Uuid
-  rideId    String   @map("ride_id") @db.Uuid
-  contactId String   @map("contact_id") @db.Uuid
-  expiresAt DateTime @map("expires_at")
+  id        String    @id @default(uuid()) @db.Uuid
+  rideId    String    @map("ride_id") @db.Uuid
+  contactId String    @map("contact_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   @@index([rideId])
   @@index([contactId, expiresAt])
@@ -382,19 +382,19 @@ model SharedTrip {
 }
 
 model EmergencyIncident {
-  id               String                @id @default(uuid()) @db.Uuid
-  riderId          String                @map("rider_id") @db.Uuid
-  rideId           String?               @map("ride_id") @db.Uuid
-  category         String
-  state            EmergencyIncidentState @default(TRIGGERED)
-  triggerSource    String                @map("trigger_source")
-  locationSnapshot Json?                 @map("location_snapshot")
-  heartbeatSnapshot Json?                @map("heartbeat_snapshot")
-  createdAt        DateTime              @default(now()) @map("created_at")
-  acknowledgedAt   DateTime?             @map("acknowledged_at")
-  escalatedAt      DateTime?             @map("escalated_at")
-  resolvedAt       DateTime?             @map("resolved_at")
-  updatedAt        DateTime              @updatedAt @map("updated_at")
+  id                String                 @id @default(uuid()) @db.Uuid
+  riderId           String                 @map("rider_id") @db.Uuid
+  rideId            String?                @map("ride_id") @db.Uuid
+  category          String
+  state             EmergencyIncidentState @default(TRIGGERED)
+  triggerSource     String                 @map("trigger_source")
+  locationSnapshot  Json?                  @map("location_snapshot")
+  heartbeatSnapshot Json?                  @map("heartbeat_snapshot")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  acknowledgedAt    DateTime?              @map("acknowledged_at")
+  escalatedAt       DateTime?              @map("escalated_at")
+  resolvedAt        DateTime?              @map("resolved_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
 
   @@index([riderId, createdAt])
   @@index([rideId])
@@ -414,13 +414,13 @@ model EmergencyEvent {
 }
 
 model EmergencyResponder {
-  id         String   @id @default(uuid()) @db.Uuid
-  incidentId String   @map("incident_id") @db.Uuid
-  responderId String  @map("responder_id") @db.Uuid
-  status     String
-  assignedAt DateTime @default(now()) @map("assigned_at")
-  arrivedAt  DateTime? @map("arrived_at")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid()) @db.Uuid
+  incidentId  String   @map("incident_id") @db.Uuid
+  responderId String   @map("responder_id") @db.Uuid
+  status      String
+  assignedAt  DateTime @default(now()) @map("assigned_at")
+  arrivedAt   DateTime? @map("arrived_at")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@index([incidentId, status])
   @@index([responderId, status])
