@@ -11,6 +11,7 @@ import paymentRouter from "./modules/payment/payment.route";
 import notificationRouter from "./modules/notification/notification.route";
 import safetyRouter from "./modules/safety/safety.route";
 import savedPlaceRouter from "./modules/saved-place/saved-place.route";
+import ratingRouter from "./modules/rating/rating.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1", safetyRouter);
 app.use("/api/v1/places/saved", savedPlaceRouter);
+app.use("/api/v1", ratingRouter);
 
 app.use(errorHandler);
 export default app;
