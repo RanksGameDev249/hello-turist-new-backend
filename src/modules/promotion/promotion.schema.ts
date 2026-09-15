@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-export const promotionIdSchema = z.object({ id: z.string().uuid() });
-export const promotionCodeSchema = z.object({ code: z.string().trim().min(2).max(50) });
-export const createPromotionSchema = z.object({
+const promotionFields = {
   code: z.string().trim().min(2).max(50).transform(v => v.toUpperCase()),
   title: z.string().trim().min(2).max(200),
   description: z.string().trim().max(1000).optional(),
@@ -14,8 +12,35 @@ export const createPromotionSchema = z.object({
   startsAt: z.coerce.date(),
   expiresAt: z.coerce.date(),
   isActive: z.boolean().default(true),
-}).refine(v => v.expiresAt > v.startsAt, { message: "expiresAt must be after startsAt" });
+};
 
-export const updatePromotionSchema = createPromotionSchema.partial().omit({ code: true });
+export const promotionIdSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const promotionCodeSchema = z.object({
+  code: z.string().trim().min(2).max(50),
+});
+
+export const createPromotionSchema = z
+  .object(promotionFields)
+  .refine(v => v.expiresAt > v.startsAt, {
+    message: "expiresAt must be after startsAt",
+  });
+
+export const updatePromotionSchema = z
+  .object(promotionFields)
+  .omit({ code: true })
+  .partial()
+  .refine(
+    v =>
+      v.startsAt === undefined ||
+      v.expiresAt === undefined ||
+      v.expiresAt > v.startsAt,
+    {
+      message: "expiresAt must be after startsAt",
+    },
+  );
+
 export type CreatePromotionInput = z.infer<typeof createPromotionSchema>;
 export type UpdatePromotionInput = z.infer<typeof updatePromotionSchema>;
