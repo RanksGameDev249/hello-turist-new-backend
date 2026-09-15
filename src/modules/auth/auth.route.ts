@@ -7,15 +7,27 @@ import {
   logoutAll,
   deleteAccount,
 } from "./auth.controller";
-
 import { authMiddleware } from "../../middleware/auth";
+import { redisRateLimit } from "../../middleware/rate-limit";
 
 const router = Router();
 
-router.post("/register", register);
-router.post("/login", login);
-router.post("/refresh", refresh);
-router.post("/logout", logout);
+const authAttemptLimit = redisRateLimit({
+  windowSeconds: 15 * 60,
+  maxRequests: 10,
+  keyPrefix: "rl:auth",
+});
+
+const refreshLimit = redisRateLimit({
+  windowSeconds: 15 * 60,
+  maxRequests: 30,
+  keyPrefix: "rl:refresh",
+});
+
+router.post("/register", authAttemptLimit, register);
+router.post("/login", authAttemptLimit, login);
+router.post("/refresh", refreshLimit, refresh);
+router.post("/logout", authMiddleware, logout);
 router.post("/logout-all", authMiddleware, logoutAll);
 router.delete("/account", authMiddleware, deleteAccount);
 export default router;
