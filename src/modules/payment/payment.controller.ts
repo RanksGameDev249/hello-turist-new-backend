@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { errorResponse, successResponse } from "../../core/api-response";
 import { createPaymentSchema, createRazorpayOrderSchema, createRefundSchema, verifyRazorpayPaymentSchema } from "./payment.schema";
 import { applyRazorpayWebhook, createPayment, createRazorpayOrder, createRefund, getPayment, listPayments, verifyRazorpayPayment } from "./payment.service";
+import { claimRazorpayWebhook, markRazorpayWebhookProcessed, releaseRazorpayWebhook } from "./payment-webhook-dedup";
 
 function getPaymentId(req: Request): string { const { id } = req.params; if (typeof id !== "string") throw new Error("INVALID_PAYMENT_ID"); return id; }
 function handleError(res: Response, requestId: string, error: unknown) {
@@ -27,6 +28,15 @@ export async function paymentWebhookController(req: Request,res: Response){
   if(expected.length!==signature.length||!crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(signature)))return errorResponse(res,req.requestId,401,"UNAUTHORIZED","Invalid Razorpay webhook signature");
   const eventId=req.header("x-razorpay-event-id");
   const event=(req.body as { event?: string })?.event;
-  if(!event)return errorResponse(res,req.requestId,400,"VALIDATION_ERROR","Missing Razorpay webhook event");
-  try{return successResponse(res,req.requestId,{received:true,event,eventId,data:await applyRazorpayWebhook(event,req.body?.payload)});}catch(e){return handleError(res,req.requestId,e);}
+  if(!event||!eventId)return errorResponse(res,req.requestId,400,"VALIDATION_ERROR","Missing Razorpay webhook event or event id");
+  const claim=await claimRazorpayWebhook(eventId,event,req.body?.payload);
+  if(!claim.accepted)return successResponse(res,req.requestId,{received:true,event,eventId,duplicate:true});
+  try{
+    const data=await applyRazorpayWebhook(event,req.body?.payload);
+    await markRazorpayWebhookProcessed(eventId);
+    return successResponse(res,req.requestId,{received:true,event,eventId,data});
+  }catch(e){
+    await releaseRazorpayWebhook(eventId);
+    return handleError(res,req.requestId,e);
+  }
 }
