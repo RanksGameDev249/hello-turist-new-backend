@@ -19,37 +19,124 @@ export interface PlaceRouteAdapter {
   getRoute(origin: Coordinate, destination: Coordinate): Promise<RouteResult>;
 }
 
-export class MockPlaceRouteAdapter implements PlaceRouteAdapter {
-  async searchPlaces(query: string, location: Coordinate = { latitude: 30.9000, longitude: 75.8573 }) {
-    return [{
-      placeId: `mock-${query.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      name: query,
-      address: query,
-      location,
-    }];
+/**
+ * Google Maps Platform adapter.
+ * GOOGLE_MAPS_API_KEY is server-side only and must never be shipped in the Android APK.
+ */
+export class GooglePlaceRouteAdapter implements PlaceRouteAdapter {
+  private readonly apiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
+
+  private requireApiKey() {
+    if (!this.apiKey) {
+      throw new Error("GOOGLE_MAPS_API_KEY_MISSING");
+    }
+    return this.apiKey;
   }
 
-  async getPlace(placeId: string) {
+  async searchPlaces(query: string, location?: Coordinate): Promise<PlaceSearchResult[]> {
+    const key = this.requireApiKey();
+    const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
+      },
+      body: JSON.stringify({
+        textQuery: query,
+        ...(location
+          ? {
+              locationBias: {
+                circle: {
+                  center: { latitude: location.latitude, longitude: location.longitude },
+                  radius: 50000,
+                },
+              },
+            }
+          : {}),
+      }),
+    });
+
+    const json = await this.readJson(response);
+    return (json.places ?? []).map((place: any) => ({
+      placeId: place.id,
+      name: place.displayName?.text ?? "",
+      address: place.formattedAddress ?? "",
+      location: {
+        latitude: Number(place.location?.latitude),
+        longitude: Number(place.location?.longitude),
+      },
+    }));
+  }
+
+  async getPlace(placeId: string): Promise<PlaceSearchResult | null> {
+    const key = this.requireApiKey();
+    const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+      headers: {
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "id,displayName,formattedAddress,location",
+      },
+    });
+
+    if (response.status === 404) return null;
+    const place: any = await this.readJson(response);
     return {
-      placeId,
-      name: placeId,
-      address: placeId,
-      location: { latitude: 30.9000, longitude: 75.8573 },
+      placeId: place.id,
+      name: place.displayName?.text ?? "",
+      address: place.formattedAddress ?? "",
+      location: {
+        latitude: Number(place.location?.latitude),
+        longitude: Number(place.location?.longitude),
+      },
     };
   }
 
-  async getRoute(origin: Coordinate, destination: Coordinate) {
-    const distanceMeters = haversineMeters(origin, destination);
-    return { distanceMeters, durationSeconds: Math.ceil(distanceMeters / 8.33) };
+  async getRoute(origin: Coordinate, destination: Coordinate): Promise<RouteResult> {
+    const key = this.requireApiKey();
+    const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: origin.latitude, longitude: origin.longitude } } },
+        destination: { location: { latLng: { latitude: destination.latitude, longitude: destination.longitude } } },
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_AWARE",
+      }),
+    });
+
+    const json: any = await this.readJson(response);
+    const route = json.routes?.[0];
+    if (!route) throw new Error("GOOGLE_ROUTE_NOT_FOUND");
+
+    return {
+      distanceMeters: Number(route.distanceMeters),
+      durationSeconds: parseDurationSeconds(route.duration),
+      polyline: route.polyline?.encodedPolyline,
+    };
+  }
+
+  private async readJson(response: Response): Promise<any> {
+    const text = await response.text();
+    let json: any;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error("GOOGLE_MAPS_INVALID_RESPONSE");
+    }
+    if (!response.ok) {
+      const message = json?.error?.message || `Google Maps request failed (${response.status})`;
+      throw new Error(`GOOGLE_MAPS_ERROR:${message}`);
+    }
+    return json;
   }
 }
 
-function haversineMeters(a: Coordinate, b: Coordinate) {
-  const earthRadius = 6371000;
-  const lat1 = a.latitude * Math.PI / 180;
-  const lat2 = b.latitude * Math.PI / 180;
-  const dLat = (b.latitude - a.latitude) * Math.PI / 180;
-  const dLon = (b.longitude - a.longitude) * Math.PI / 180;
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return Math.round(2 * earthRadius * Math.asin(Math.sqrt(x)));
+function parseDurationSeconds(value: unknown): number {
+  if (typeof value !== "string") return 0;
+  const match = value.match(/^(\d+(?:\.\d+)?)s$/);
+  return match ? Math.ceil(Number(match[1])) : 0;
 }
