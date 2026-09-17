@@ -101,18 +101,14 @@ export async function createRefund(userId: string, paymentId: string, input: Cre
     const refundAmount = input.amount ?? (Number(payment.amount) - alreadyRefunded);
     if (refundAmount <= 0 || refundAmount > Number(payment.amount) - alreadyRefunded) throw new Error("INVALID_REFUND_AMOUNT");
     const refund = await tx.refund.create({ data: { paymentId, amount: refundAmount, reason: input.reason } });
-    return { refund, payerId: payment.payerId, rideId: payment.rideId, providerPaymentId: payment.providerPaymentId, paymentAmount: Number(payment.amount), alreadyRefunded };
+    return { refund, payerId: payment.payerId, rideId: payment.rideId, providerPaymentId: payment.providerPaymentId, paymentAmount: Number(payment.amount) };
   });
 
   let providerRefund: any;
   try {
     providerRefund = await razorpayRequest(`/payments/${encodeURIComponent(result.providerPaymentId)}/refund`, {
       method: "POST",
-      body: JSON.stringify({
-        amount: Math.round(Number(result.refund.amount) * 100),
-        receipt: `refund_${result.refund.id}`.slice(0, 40),
-        notes: { paymentId, refundId: result.refund.id, rideId: result.rideId, reason: input.reason ?? "" },
-      }),
+      body: JSON.stringify({ amount: Math.round(Number(result.refund.amount) * 100), receipt: `refund_${result.refund.id}`.slice(0, 40), notes: { paymentId, refundId: result.refund.id, rideId: result.rideId, reason: input.reason ?? "" } }),
     });
   } catch (error) {
     await prisma.refund.update({ where: { id: result.refund.id }, data: { status: "FAILED" } });
@@ -138,6 +134,49 @@ export async function createRefund(userId: string, paymentId: string, input: Cre
   const body = status === "PROCESSED" ? "Your Razorpay refund has been processed." : status === "FAILED" ? "Your Razorpay refund failed. Please contact support if needed." : "Your Razorpay refund has been submitted and is pending processing.";
   await sendPaymentNotification(result.payerId, title, body, { event, paymentId, refundId: refund.id, rideId: result.rideId, providerRefundId: refund.providerRefundId ?? null });
   return refund;
+}
+
+export async function applyRazorpayWebhook(event: string, payload: any) {
+  const refundEntity = payload?.refund?.entity;
+  const paymentEntity = payload?.payment?.entity;
+  if (event.startsWith("refund.")) {
+    const providerRefundId = refundEntity?.id;
+    const providerPaymentId = refundEntity?.payment_id || paymentEntity?.id;
+    if (!providerRefundId || !providerPaymentId) throw new Error("INVALID_RAZORPAY_REFUND_WEBHOOK");
+    const payment = await prisma.payment.findUnique({ where: { providerPaymentId }, include: { refunds: true } });
+    if (!payment) throw new Error("PAYMENT_NOT_FOUND");
+    let refund = await prisma.refund.findUnique({ where: { providerRefundId } });
+    if (!refund) {
+      const pending = payment.refunds.filter((item) => item.status === "PENDING").sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+      if (!pending) throw new Error("REFUND_NOT_FOUND");
+      refund = await prisma.refund.update({ where: { id: pending.id }, data: { providerRefundId } });
+    }
+    const providerStatus = String(refundEntity?.status || (event === "refund.failed" ? "failed" : event === "refund.processed" ? "processed" : "pending")).toLowerCase();
+    const status = providerStatus === "processed" ? "PROCESSED" : providerStatus === "failed" ? "FAILED" : "PENDING";
+    if (refund.status !== status || refund.providerRefundId !== providerRefundId) {
+      refund = await prisma.refund.update({ where: { id: refund.id }, data: { status, providerRefundId } });
+    }
+    if (status === "PROCESSED") {
+      const refunds = await prisma.refund.findMany({ where: { paymentId: payment.id, status: { not: "FAILED" } } });
+      const refundedTotal = refunds.reduce((sum, item) => sum + Number(item.amount), 0);
+      if (refundedTotal >= Number(payment.amount) && payment.status !== "REFUNDED") await prisma.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } });
+    }
+    const eventKey = status === "PROCESSED" ? "REFUND_PROCESSED" : status === "FAILED" ? "REFUND_FAILED" : "REFUND_PENDING";
+    await sendPaymentNotification(payment.payerId, status === "PROCESSED" ? "Refund processed" : status === "FAILED" ? "Refund failed" : "Refund pending", status === "PROCESSED" ? "Your Razorpay refund has been processed." : status === "FAILED" ? "Your Razorpay refund failed. Please contact support if needed." : "Your Razorpay refund is still being processed.", { event: eventKey, paymentId: payment.id, refundId: refund.id, rideId: payment.rideId, providerRefundId });
+    return refund;
+  }
+  const paymentId = paymentEntity?.id;
+  if (!paymentId) throw new Error("INVALID_RAZORPAY_PAYMENT_WEBHOOK");
+  const payment = await prisma.payment.findUnique({ where: { providerPaymentId: paymentId } });
+  if (!payment) throw new Error("PAYMENT_NOT_FOUND");
+  if (event === "payment.captured") {
+    if (payment.status !== "CAPTURED" && payment.status !== "REFUNDED") await prisma.payment.update({ where: { id: payment.id }, data: { status: "CAPTURED", paidAt: new Date() } });
+  } else if (event === "payment.failed") {
+    if (payment.status !== "CAPTURED" && payment.status !== "REFUNDED") await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED", failedAt: new Date() } });
+  } else if (event === "payment.authorized" && payment.status === "PENDING") {
+    await prisma.payment.update({ where: { id: payment.id }, data: { status: "AUTHORIZED" } });
+  }
+  return prisma.payment.findUnique({ where: { id: payment.id }, include: paymentInclude });
 }
 
 export async function applyPaymentWebhook(input: PaymentWebhookInput) {
