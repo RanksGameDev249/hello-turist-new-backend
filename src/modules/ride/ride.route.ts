@@ -1,14 +1,11 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
-import {
-  acceptRideController, addEventController, addLocationController, assignRideController,
-  cancelRideController, createRideController, getRideController, listEventsController,
-  listLocationsController, listRidesController, rejectRideController,
-} from "./ride.controller";
+import { acceptRideController, addEventController, addLocationController, assignRideController, cancelRideController, createRideController, getRideController, listEventsController, listLocationsController, listRidesController, rejectRideController } from "./ride.controller";
+import { listDriverRidesController } from "./driver-ride.controller";
 
 const router = Router();
 router.use(authMiddleware);
-
+router.get("/driver", listDriverRidesController);
 router.post("/", createRideController);
 router.get("/", listRidesController);
 router.get("/:id", getRideController);
