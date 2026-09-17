@@ -93,15 +93,51 @@ export async function createRefund(userId: string, paymentId: string, input: Cre
     const payment = await tx.payment.findUnique({ where: { id: paymentId }, include: { refunds: true } });
     if (!payment) throw new Error("PAYMENT_NOT_FOUND");
     if (payment.payerId !== userId) throw new Error("FORBIDDEN");
+    if (payment.provider !== "RAZORPAY") throw new Error("REFUND_PROVIDER_UNSUPPORTED");
     if (payment.status !== "CAPTURED") throw new Error("PAYMENT_NOT_REFUNDABLE");
+    if (!payment.providerPaymentId) throw new Error("PAYMENT_PROVIDER_ID_MISSING");
+    if (payment.refunds.some((refund) => refund.status === "PENDING")) throw new Error("REFUND_ALREADY_PROCESSING");
     const alreadyRefunded = payment.refunds.reduce((sum, refund) => refund.status !== "FAILED" ? sum + Number(refund.amount) : sum, 0);
     const refundAmount = input.amount ?? (Number(payment.amount) - alreadyRefunded);
     if (refundAmount <= 0 || refundAmount > Number(payment.amount) - alreadyRefunded) throw new Error("INVALID_REFUND_AMOUNT");
     const refund = await tx.refund.create({ data: { paymentId, amount: refundAmount, reason: input.reason } });
-    return { refund, payerId: payment.payerId, rideId: payment.rideId };
+    return { refund, payerId: payment.payerId, rideId: payment.rideId, providerPaymentId: payment.providerPaymentId, paymentAmount: Number(payment.amount), alreadyRefunded };
   });
-  await sendPaymentNotification(result.payerId, "Refund requested", "Your refund request has been created and is being processed.", { event: "REFUND_CREATED", paymentId, refundId: result.refund.id, rideId: result.rideId });
-  return result.refund;
+
+  let providerRefund: any;
+  try {
+    providerRefund = await razorpayRequest(`/payments/${encodeURIComponent(result.providerPaymentId)}/refund`, {
+      method: "POST",
+      body: JSON.stringify({
+        amount: Math.round(Number(result.refund.amount) * 100),
+        receipt: `refund_${result.refund.id}`.slice(0, 40),
+        notes: { paymentId, refundId: result.refund.id, rideId: result.rideId, reason: input.reason ?? "" },
+      }),
+    });
+  } catch (error) {
+    await prisma.refund.update({ where: { id: result.refund.id }, data: { status: "FAILED" } });
+    await sendPaymentNotification(result.payerId, "Refund failed", "Your refund could not be processed by Razorpay. Please try again or contact support.", { event: "REFUND_FAILED", paymentId, refundId: result.refund.id, rideId: result.rideId });
+    if (error instanceof Error && error.message === "RAZORPAY_NOT_CONFIGURED") throw error;
+    throw new Error("RAZORPAY_REFUND_FAILED");
+  }
+
+  const providerStatus = String(providerRefund?.status || "pending").toLowerCase();
+  const status = providerStatus === "processed" ? "PROCESSED" : providerStatus === "failed" ? "FAILED" : "PENDING";
+  const refund = await prisma.$transaction(async (tx) => {
+    const updatedRefund = await tx.refund.update({ where: { id: result.refund.id }, data: { status, providerRefundId: providerRefund?.id ?? undefined } });
+    if (status === "PROCESSED") {
+      const refunds = await tx.refund.findMany({ where: { paymentId, status: { not: "FAILED" } } });
+      const refundedTotal = refunds.reduce((sum, item) => sum + Number(item.amount), 0);
+      if (refundedTotal >= result.paymentAmount) await tx.payment.update({ where: { id: paymentId }, data: { status: "REFUNDED" } });
+    }
+    return updatedRefund;
+  });
+
+  const event = status === "PROCESSED" ? "REFUND_PROCESSED" : status === "FAILED" ? "REFUND_FAILED" : "REFUND_PENDING";
+  const title = status === "PROCESSED" ? "Refund processed" : status === "FAILED" ? "Refund failed" : "Refund pending";
+  const body = status === "PROCESSED" ? "Your Razorpay refund has been processed." : status === "FAILED" ? "Your Razorpay refund failed. Please contact support if needed." : "Your Razorpay refund has been submitted and is pending processing.";
+  await sendPaymentNotification(result.payerId, title, body, { event, paymentId, refundId: refund.id, rideId: result.rideId, providerRefundId: refund.providerRefundId ?? null });
+  return refund;
 }
 
 export async function applyPaymentWebhook(input: PaymentWebhookInput) {
