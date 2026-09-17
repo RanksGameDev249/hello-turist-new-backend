@@ -20,7 +20,7 @@ import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
 const app = express();
-app.use(express.json());
+app.use(express.json({ verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf); } }));
 app.use(requestIdMiddleware);
 app.get("/health", (_req, res) => res.status(200).json({ success: true, data: { status: "ok" }, error: null, requestId: _req.requestId }));
 app.use("/api/v1/auth", authRouter);
