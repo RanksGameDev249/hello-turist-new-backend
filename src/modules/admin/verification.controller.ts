@@ -18,7 +18,8 @@ export async function getVerificationRequestById(req: Request, res: Response) {
 export async function decideVerificationRequest(req: Request, res: Response) {
   const status = req.body?.status;
   if (status !== "APPROVED" && status !== "REJECTED") return res.status(400).json({ success: false, message: "status must be APPROVED or REJECTED" });
-  if (status === "REJECTED" && !String(req.body?.reason ?? "").trim()) return res.status(400).json({ success: false, message: "reason is required when rejecting" });
-  const request = await updateVerificationRequest(req.params.id, status, req.body?.reason);
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : undefined;
+  if (status === "REJECTED" && !reason) return res.status(400).json({ success: false, message: "reason is required when rejecting" });
+  const request = await updateVerificationRequest(req.params.id, status, reason);
   return res.json({ success: true, data: request });
 }
