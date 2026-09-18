@@ -16,7 +16,7 @@ const registerWithPhoneSchema = z.object({
 
 const googleAuthSchema = z.object({
   idToken: z.string().trim().min(20),
-  phone: z.string().trim().min(8).max(20),
+  phone: z.string().trim().min(8).max(20).optional(),
 });
 
 function sendError(res: Response, req: Request, status: number, code: string, message: string) {
@@ -57,7 +57,7 @@ export async function registerWithPhone(req: Request, res: Response) {
 export async function googleAuth(req: Request, res: Response) {
   const parsed = googleAuthSchema.safeParse(req.body);
   if (!parsed.success) {
-    return sendError(res, req, 400, "VALIDATION_ERROR", "Google account and mobile number are required");
+    return sendError(res, req, 400, "VALIDATION_ERROR", "Google account information is invalid");
   }
 
   try {
@@ -71,6 +71,7 @@ export async function googleAuth(req: Request, res: Response) {
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "INVALID_PHONE_NUMBER") return sendError(res, req, 400, error.message, "Enter a valid mobile number");
+      if (error.message === "GOOGLE_PHONE_REQUIRED") return sendError(res, req, 400, error.message, "Mobile number is required to create your account with Google");
       if (error.message === "PHONE_ALREADY_EXISTS") return sendError(res, req, 409, error.message, "Phone number is already registered to another account");
       if (error.message === "GOOGLE_ACCOUNT_ALREADY_LINKED") return sendError(res, req, 409, error.message, "Google account is already linked to another account");
       if (error.message === "ACCOUNT_NOT_ACTIVE") return sendError(res, req, 403, error.message, "Account is not active");
