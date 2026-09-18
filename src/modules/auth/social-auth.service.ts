@@ -188,14 +188,16 @@ export async function loginWithGoogle(input: {
       where: { email },
       select: { id: true },
     });
-    userId = existingByEmail?.id;
+    if (existingByEmail) {
+      userId = existingByEmail.id;
+    }
   }
 
   if (userId) {
     const existingUser = await getUserForSession(userId);
 
     if (existingUser.phone) {
-      if (!existingUser.phone || existingByFirebase?.id !== userId) {
+      if (existingByFirebase?.id !== userId) {
         await prisma.$executeRaw`
           UPDATE users
           SET firebase_uid = ${firebaseUid}, updated_at = CURRENT_TIMESTAMP
