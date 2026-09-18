@@ -56,6 +56,41 @@ export async function getGuideProfile(userId: string) {
   return prisma.guideProfile.findUnique({ where: { userId }, select: guideSelect });
 }
 
+export async function listGuides(serviceCity?: string) {
+  const profiles = await prisma.guideProfile.findMany({
+    where: {
+      isAvailable: true,
+      ...(serviceCity ? { serviceCity: { equals: serviceCity, mode: "insensitive" } } : {}),
+      user: {
+        roles: {
+          some: { role: "GUIDE", verificationStatus: "APPROVED" },
+        },
+      },
+    },
+    select: {
+      ...guideSelect,
+      user: { select: { name: true } },
+      // Keep verification information server-derived; the client must not infer it.
+      user: {
+        select: {
+          name: true,
+          roles: {
+            where: { role: "GUIDE" },
+            select: { verificationStatus: true },
+          },
+        },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return profiles.map(({ user, ...profile }) => ({
+    ...profile,
+    name: user.name,
+    verificationStatus: user.roles[0]?.verificationStatus ?? "PENDING",
+  }));
+}
+
 export async function upsertGuideProfile(userId: string, data: Record<string, unknown>) {
   await requireRole(userId, "GUIDE");
   return prisma.guideProfile.upsert({ where: { userId }, create: { userId, ...data }, update: data, select: guideSelect });
