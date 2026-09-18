@@ -80,24 +80,20 @@ async function issueSession(user: {
 }
 
 async function findUserByFirebaseUid(firebaseUid: string) {
-  const rows = await prisma.$queryRaw<
-    Array<{ id: string }>
-  >`SELECT id FROM users WHERE firebase_uid = ${firebaseUid} LIMIT 1`;
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM users WHERE firebase_uid = ${firebaseUid} LIMIT 1
+  `;
   return rows[0] ?? null;
 }
 
 async function findUserByPhone(phone: string) {
-  const rows = await prisma.$queryRaw<
-    Array<{ id: string }>
-  >`SELECT id FROM users WHERE phone = ${phone} LIMIT 1`;
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM users WHERE phone = ${phone} LIMIT 1
+  `;
   return rows[0] ?? null;
 }
 
-async function attachFirebaseIdentity(
-  userId: string,
-  firebaseUid: string,
-  phone: string
-) {
+async function attachFirebaseIdentity(userId: string, firebaseUid: string, phone: string) {
   const firebaseOwner = await findUserByFirebaseUid(firebaseUid);
   if (firebaseOwner && firebaseOwner.id !== userId) {
     throw new Error("GOOGLE_ACCOUNT_ALREADY_LINKED");
@@ -130,9 +126,9 @@ async function getUserForSession(userId: string) {
 
   if (!user) throw new Error("USER_NOT_FOUND");
 
-  const phoneRows = await prisma.$queryRaw<
-    Array<{ phone: string | null }>
-  >`SELECT phone FROM users WHERE id = ${userId}::uuid LIMIT 1`;
+  const phoneRows = await prisma.$queryRaw<Array<{ phone: string | null }>>`
+    SELECT phone FROM users WHERE id = ${userId}::uuid LIMIT 1
+  `;
 
   return { ...user, phone: phoneRows[0]?.phone ?? null };
 }
@@ -172,11 +168,10 @@ export async function registerUserWithPhone(input: {
 
 export async function loginWithGoogle(input: {
   idToken: string;
-  phone: string;
+  phone?: string;
 }) {
   if (!input.idToken.trim()) throw new Error("INVALID_FIREBASE_ID_TOKEN");
 
-  const phone = validatePhone(input.phone);
   const decoded = await verifyFirebaseIdToken(input.idToken.trim());
   const firebaseUid = decoded.uid;
   const email = typeof decoded.email === "string" ? decoded.email.trim().toLowerCase() : undefined;
@@ -197,8 +192,23 @@ export async function loginWithGoogle(input: {
   }
 
   if (userId) {
-    await attachFirebaseIdentity(userId, firebaseUid, phone);
+    const existingUser = await getUserForSession(userId);
+
+    if (existingUser.phone) {
+      if (!existingUser.phone || existingByFirebase?.id !== userId) {
+        await prisma.$executeRaw`
+          UPDATE users
+          SET firebase_uid = ${firebaseUid}, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${userId}::uuid
+        `;
+      }
+    } else {
+      if (!input.phone?.trim()) throw new Error("GOOGLE_PHONE_REQUIRED");
+      await attachFirebaseIdentity(userId, firebaseUid, validatePhone(input.phone));
+    }
   } else {
+    if (!input.phone?.trim()) throw new Error("GOOGLE_PHONE_REQUIRED");
+    const phone = validatePhone(input.phone);
     const existingPhone = await findUserByPhone(phone);
     if (existingPhone) throw new Error("PHONE_ALREADY_EXISTS");
 
