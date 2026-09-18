@@ -5,6 +5,7 @@ import {
   deleteVehicleController,
   getDriver,
   getGuide,
+  listGuides,
   listVehicleController,
   updateDriver,
   updateGuide,
@@ -17,6 +18,7 @@ router.use(authMiddleware);
 router.get("/driver/profile", getDriver);
 router.put("/driver/profile", updateDriver);
 router.get("/guide/profile", getGuide);
+router.get("/guides", listGuides);
 router.put("/guide/profile", updateGuide);
 
 router.post("/driver/vehicles", createVehicleController);
