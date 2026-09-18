@@ -20,9 +20,8 @@ function handleError(error: unknown, req: Request, res: Response) {
 }
 
 export async function getDriver(req: Request, res: Response) {
-  try {
-    return successResponse(res, req.requestId, await service.getDriverProfile(req.user.id));
-  } catch (error) { return handleError(error, req, res); }
+  try { return successResponse(res, req.requestId, await service.getDriverProfile(req.user.id)); }
+  catch (error) { return handleError(error, req, res); }
 }
 
 export async function updateDriver(req: Request, res: Response) {
@@ -33,9 +32,14 @@ export async function updateDriver(req: Request, res: Response) {
 }
 
 export async function getGuide(req: Request, res: Response) {
-  try {
-    return successResponse(res, req.requestId, await service.getGuideProfile(req.user.id));
-  } catch (error) { return handleError(error, req, res); }
+  try { return successResponse(res, req.requestId, await service.getGuideProfile(req.user.id)); }
+  catch (error) { return handleError(error, req, res); }
+}
+
+export async function listGuides(req: Request, res: Response) {
+  const serviceCity = typeof req.query.serviceCity === "string" ? req.query.serviceCity.trim() : undefined;
+  try { return successResponse(res, req.requestId, await service.listGuides(serviceCity)); }
+  catch (error) { return handleError(error, req, res); }
 }
 
 export async function updateGuide(req: Request, res: Response) {
