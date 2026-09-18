@@ -1,0 +1,46 @@
+{
+  "project": "Hello Kurukshetra",
+  "version": "1.0",
+  "generated_date": "2026-09-03",
+  "documents": [
+    "00_README.md",
+    "01_PRD.md",
+    "02_UX_UI_DESIGN_SPEC.md",
+    "03_SYSTEM_ARCHITECTURE.md",
+    "04_DATABASE_SCHEMA.md",
+    "05_API_SPECIFICATION.md",
+    "06_REALTIME_EVENTS.md",
+    "07_STATE_MACHINES.md",
+    "08_SECURITY_PRIVACY.md",
+    "09_ADMIN_PANEL_SPEC.md",
+    "10_ANDROID_APP_SPEC.md",
+    "11_QA_TEST_PLAN.md",
+    "12_PRODUCT_ROADMAP.md",
+    "13_REQUIREMENTS_TRACEABILITY.md",
+    "14_ENVIRONMENT_DEPLOYMENT.md",
+    "15_DECISIONS_AND_RISKS.md",
+    "16_LANGUAGE_LOCATION_LOCALIZATION.md"
+  ],
+  "primary_roles": [
+    "rider",
+    "driver",
+    "guide"
+  ],
+  "admin": "React + TypeScript",
+  "android": "Kotlin + Jetpack Compose",
+  "backend_recommendation": "TypeScript + NestJS modular backend",
+  "database": "PostgreSQL + PostGIS",
+  "realtime": "WebSockets / Socket.IO",
+  "payments": "Razorpay where supported",
+  "maps": "Google Maps Platform",
+  "push": "Firebase Cloud Messaging",
+  "features_added": [
+    "language selection during account creation",
+    "device locale detection",
+    "location-based language recommendations",
+    "manual language switching",
+    "driver/guide spoken-language capabilities",
+    "localized notifications",
+    "RTL readiness"
+  ]
+}
