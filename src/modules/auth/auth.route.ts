@@ -1,12 +1,15 @@
 import { Router } from "express";
 import {
-  register,
   login,
   refresh,
   logout,
   logoutAll,
   deleteAccount,
 } from "./auth.controller";
+import {
+  registerWithPhone,
+  googleAuth,
+} from "./social-auth.controller";
 import { authMiddleware } from "../../middleware/auth";
 import { redisRateLimit } from "../../middleware/rate-limit";
 
@@ -24,7 +27,10 @@ const refreshLimit = redisRateLimit({
   keyPrefix: "rl:refresh",
 });
 
-router.post("/register", authAttemptLimit, register);
+// Every new local account must include a mobile number.
+router.post("/register", authAttemptLimit, registerWithPhone);
+// Google account creation/login requires a mobile number before a backend session is issued.
+router.post("/google", authAttemptLimit, googleAuth);
 router.post("/login", authAttemptLimit, login);
 router.post("/refresh", refreshLimit, refresh);
 router.post("/logout", authMiddleware, logout);
