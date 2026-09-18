@@ -30,20 +30,59 @@ async function uniqueUsername(base: string) {
   return `user${crypto.randomInt(10000000, 99999999)}`;
 }
 
+type GoogleJwk = { kty: string; n: string; e: string; alg?: string; use?: string; kid?: string };
+let googleKeysCache: { expiresAt: number; keys: Record<string, GoogleJwk> } | null = null;
+
+function decodeBase64UrlJson(value: string) {
+  return JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Record<string, unknown>;
+}
+
+async function getGoogleSigningKeys() {
+  if (googleKeysCache && googleKeysCache.expiresAt > Date.now()) return googleKeysCache.keys;
+  const response = await fetch("https://www.googleapis.com/oauth2/v3/certs");
+  if (!response.ok) throw new Error("GOOGLE_KEY_FETCH_FAILED");
+  const body = (await response.json()) as { keys?: GoogleJwk[] };
+  const keys = Object.fromEntries((body.keys ?? []).filter((key) => key.kid).map((key) => [key.kid!, key]));
+  const cacheControl = response.headers.get("cache-control") ?? "";
+  const maxAge = Number(cacheControl.match(/max-age=(\d+)/)?.[1] ?? 3600);
+  googleKeysCache = { keys, expiresAt: Date.now() + Math.min(Math.max(maxAge, 300), 24 * 60 * 60) * 1000 };
+  return keys;
+}
+
 async function googleTokenInfo(idToken: string, expectedNonce: string) {
-  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
-  const data = (await response.json()) as Record<string, unknown>;
-  if (!response.ok) throw new Error("INVALID_GOOGLE_TOKEN");
-  const audience = String(data.aud ?? "");
+  const parts = idToken.split(".");
+  if (parts.length !== 3) throw new Error("INVALID_GOOGLE_TOKEN");
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  let header: Record<string, unknown>;
+  let payload: Record<string, unknown>;
+  try {
+    header = decodeBase64UrlJson(encodedHeader);
+    payload = decodeBase64UrlJson(encodedPayload);
+  } catch {
+    throw new Error("INVALID_GOOGLE_TOKEN");
+  }
+  if (header.alg !== "RS256" || typeof header.kid !== "string") throw new Error("INVALID_GOOGLE_TOKEN");
+
+  const keys = await getGoogleSigningKeys();
+  const jwk = keys[header.kid];
+  if (!jwk) throw new Error("INVALID_GOOGLE_TOKEN");
+  const publicKey = crypto.createPublicKey({ key: jwk as JsonWebKey, format: "jwk" });
+  const validSignature = crypto.verify("RSA-SHA256", Buffer.from(`${encodedHeader}.${encodedPayload}`), publicKey, Buffer.from(encodedSignature, "base64url"));
+  if (!validSignature) throw new Error("INVALID_GOOGLE_TOKEN");
+
   const expectedAudience = process.env.GOOGLE_WEB_CLIENT_ID?.trim();
-  const issuer = String(data.iss ?? "");
-  const email = String(data.email ?? "").trim().toLowerCase();
-  const subject = String(data.sub ?? "");
-  const tokenNonce = String(data.nonce ?? "");
-  const emailVerified = String(data.email_verified ?? "").toLowerCase() === "true" || data.email_verified === true;
-  if (!expectedAudience || audience !== expectedAudience || !subject || !email || !emailVerified || tokenNonce !== expectedNonce) throw new Error("INVALID_GOOGLE_TOKEN");
+  const issuer = String(payload.iss ?? "");
+  const audience = String(payload.aud ?? "");
+  const subject = String(payload.sub ?? "");
+  const email = String(payload.email ?? "").trim().toLowerCase();
+  const tokenNonce = String(payload.nonce ?? "");
+  const emailVerified = String(payload.email_verified ?? "").toLowerCase() === "true" || payload.email_verified === true;
+  const exp = Number(payload.exp ?? 0);
+  const now = Math.floor(Date.now() / 1000);
+
+  if (!expectedAudience || audience !== expectedAudience || !subject || !email || !emailVerified || tokenNonce !== expectedNonce || exp <= now || exp > now + 24 * 60 * 60) throw new Error("INVALID_GOOGLE_TOKEN");
   if (issuer !== "accounts.google.com" && issuer !== "https://accounts.google.com") throw new Error("INVALID_GOOGLE_TOKEN");
-  return { subject, email, name: String(data.name ?? email.split("@")[0]), picture: String(data.picture ?? "").trim() || null };
+  return { subject, email, name: String(payload.name ?? email.split("@")[0]), picture: String(payload.picture ?? "").trim() || null };
 }
 
 export async function loginWithGoogle(idToken: string, nonce: string) {
