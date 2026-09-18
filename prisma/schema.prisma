@@ -16,7 +16,6 @@ model SupportTicket {
   createdAt DateTime              @default(now()) @map("created_at")
   updatedAt DateTime              @updatedAt @map("updated_at")
   messages  SupportTicketMessage[]
-
   @@index([userId, createdAt])
   @@index([status, updatedAt])
   @@map("support_tickets")
@@ -30,7 +29,6 @@ model SupportTicketMessage {
   isStaff   Boolean       @default(false) @map("is_staff")
   createdAt DateTime      @default(now()) @map("created_at")
   ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
   @@index([ticketId, createdAt])
   @@map("support_ticket_messages")
 }
@@ -40,6 +38,10 @@ model User {
   name                 String
   username             String                 @unique
   email                String?                @unique
+  phone                String?                @unique @db.VarChar(20)
+  googleSubject        String?                @unique @map("google_subject")
+  firebaseUid          String?                @unique @map("firebase_uid")
+  profileImageUrl      String?                @map("profile_image_url")
   passwordHash         String                 @map("password_hash")
   status               UserStatus             @default(ACTIVE)
   preferredLanguage    String                 @default("en") @map("preferred_language")
@@ -57,7 +59,6 @@ model User {
   rideLocations        RideLocation[]         @relation("RideLocationDriver")
   payments             Payment[]              @relation("PaymentPayer")
   notifications        Notification[]
-
   @@map("users")
 }
 
@@ -68,7 +69,6 @@ model UserRoleAssignment {
   verificationStatus String   @default("PENDING") @map("verification_status")
   createdAt          DateTime @default(now()) @map("created_at")
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([userId, role])
   @@index([userId])
   @@map("user_roles")
@@ -83,7 +83,6 @@ model RefreshSession {
   revokedAt      DateTime? @map("revoked_at")
   replacedByHash String?   @map("replaced_by_hash")
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId])
   @@index([expiresAt])
   @@map("auth_refresh_sessions")
@@ -92,7 +91,6 @@ model RefreshSession {
 model RefreshTokenReuse {
   tokenHash  String   @id @map("token_hash")
   detectedAt DateTime @default(now())
-
   @@map("auth_refresh_reuse")
 }
 
@@ -110,7 +108,6 @@ model VerificationRequest {
   steps           VerificationStep[]
   documents       VerificationDocument[]
   liveSession     VerificationLiveSession?
-
   @@index([userId])
   @@index([status])
   @@index([role, status])
@@ -126,7 +123,6 @@ model VerificationStep {
   createdAt             DateTime                @default(now()) @map("created_at")
   updatedAt             DateTime                @updatedAt @map("updated_at")
   verificationRequest   VerificationRequest    @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
-
   @@unique([verificationRequestId, step])
   @@index([verificationRequestId])
   @@map("verification_steps")
@@ -143,7 +139,6 @@ model VerificationDocument {
   createdAt             DateTime             @default(now()) @map("created_at")
   updatedAt             DateTime             @updatedAt @map("updated_at")
   verificationRequest   VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
-
   @@index([verificationRequestId])
   @@index([verificationStatus])
   @@map("verification_documents")
@@ -159,7 +154,6 @@ model VerificationLiveSession {
   createdAt             DateTime                @default(now()) @map("created_at")
   updatedAt             DateTime                @updatedAt @map("updated_at")
   verificationRequest  VerificationRequest    @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
-
   @@map("verification_live_sessions")
 }
 
@@ -176,7 +170,6 @@ model DriverProfile {
   updatedAt       DateTime     @updatedAt @map("updated_at")
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   vehicles        Vehicle[]
-
   @@index([serviceCity])
   @@index([isAvailable])
   @@map("driver_profiles")
@@ -195,7 +188,6 @@ model GuideProfile {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([serviceCity])
   @@index([isAvailable])
   @@map("guide_profiles")
@@ -216,7 +208,6 @@ model Vehicle {
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
   driverProfile      DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
-
   @@index([driverProfileId])
   @@index([isActive])
   @@map("vehicles")
@@ -244,7 +235,6 @@ model Ride {
   events             RideEvent[]
   locations          RideLocation[]
   payment            Payment?
-
   @@index([riderId, createdAt])
   @@index([status])
   @@index([scheduledAt])
@@ -263,7 +253,6 @@ model RideAssignment {
   updatedAt  DateTime             @updatedAt @map("updated_at")
   ride       Ride                 @relation(fields: [rideId], references: [id], onDelete: Cascade)
   driver     User                 @relation("RideDriver", fields: [driverId], references: [id], onDelete: Cascade)
-
   @@index([rideId, status])
   @@index([driverId, status])
   @@map("ride_assignments")
@@ -278,7 +267,6 @@ model RideEvent {
   createdAt   DateTime      @default(now()) @map("created_at")
   ride        Ride          @relation(fields: [rideId], references: [id], onDelete: Cascade)
   actor       User?         @relation("RideEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
-
   @@index([rideId, createdAt])
   @@map("ride_events")
 }
@@ -294,7 +282,6 @@ model RideLocation {
   createdAt  DateTime  @default(now()) @map("created_at")
   ride       Ride      @relation(fields: [rideId], references: [id], onDelete: Cascade)
   driver     User?     @relation("RideLocationDriver", fields: [driverId], references: [id], onDelete: SetNull)
-
   @@index([rideId, recordedAt])
   @@map("ride_locations")
 }
@@ -316,7 +303,6 @@ model Payment {
   ride              Ride          @relation(fields: [rideId], references: [id], onDelete: Cascade)
   payer             User          @relation("PaymentPayer", fields: [payerId], references: [id], onDelete: Cascade)
   refunds           Refund[]
-
   @@index([payerId, createdAt])
   @@index([status])
   @@map("payments")
@@ -332,7 +318,6 @@ model Refund {
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
   payment          Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-
   @@index([paymentId, createdAt])
   @@index([status])
   @@map("refunds")
@@ -348,7 +333,6 @@ model Notification {
   readAt    DateTime?        @map("read_at")
   createdAt DateTime         @default(now()) @map("created_at")
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId, createdAt])
   @@index([userId, readAt])
   @@map("notifications")
@@ -362,7 +346,6 @@ model TrustedContact {
   consentStatus TrustedContactConsentStatus @default(PENDING) @map("consent_status")
   createdAt     DateTime                   @default(now()) @map("created_at")
   updatedAt     DateTime                   @updatedAt @map("updated_at")
-
   @@index([ownerId])
   @@index([ownerId, consentStatus])
   @@map("trusted_contacts")
@@ -375,7 +358,6 @@ model SharedTrip {
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
-
   @@index([rideId])
   @@index([contactId, expiresAt])
   @@map("shared_trips")
@@ -395,7 +377,6 @@ model EmergencyIncident {
   escalatedAt       DateTime?              @map("escalated_at")
   resolvedAt        DateTime?              @map("resolved_at")
   updatedAt         DateTime               @updatedAt @map("updated_at")
-
   @@index([riderId, createdAt])
   @@index([rideId])
   @@index([state, createdAt])
@@ -408,7 +389,6 @@ model EmergencyEvent {
   type       String
   payload    Json?
   occurredAt DateTime @default(now()) @map("occurred_at")
-
   @@index([incidentId, occurredAt])
   @@map("emergency_events")
 }
@@ -421,7 +401,6 @@ model EmergencyResponder {
   assignedAt  DateTime @default(now()) @map("assigned_at")
   arrivedAt   DateTime? @map("arrived_at")
   createdAt   DateTime @default(now()) @map("created_at")
-
   @@index([incidentId, status])
   @@index([responderId, status])
   @@map("emergency_responders")
@@ -437,132 +416,22 @@ model SavedPlace {
   placeId   String?  @map("place_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   @@index([userId, createdAt])
   @@map("saved_places")
 }
 
-enum VehicleType {
-  CAR
-  SUV
-  SEDAN
-  HATCHBACK
-  VAN
-  BUS
-  OTHER
-}
-
-enum UserStatus {
-  ACTIVE
-  BLOCKED
-  SUSPENDED
-  DELETED
-}
-
-enum UserRole {
-  RIDER
-  DRIVER
-  GUIDE
-  ADMIN
-}
-
-enum VerificationStatus {
-  PENDING
-  UNDER_VERIFICATION
-  VERIFIED
-  REJECTED
-  RESUBMITTED
-  SUSPENDED
-  BLOCKED
-}
-
-enum VerificationStepType {
-  PROFILE
-  DOCUMENTS
-  LIVE_SESSION
-  REVIEW
-}
-
-enum VerificationStepStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  FAILED
-}
-
-enum RideStatus {
-  REQUESTED
-  SEARCHING
-  ASSIGNED
-  DRIVER_ARRIVING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum RideAssignmentStatus {
-  OFFERED
-  ACCEPTED
-  REJECTED
-  EXPIRED
-}
-
-enum RideEventType {
-  CREATED
-  SEARCH_STARTED
-  DRIVER_ASSIGNED
-  DRIVER_ACCEPTED
-  DRIVER_REJECTED
-  DRIVER_ARRIVING
-  RIDE_STARTED
-  RIDE_COMPLETED
-  CANCELLED
-  LOCATION_RECORDED
-}
-
-enum PaymentStatus {
-  PENDING
-  AUTHORIZED
-  CAPTURED
-  FAILED
-  REFUNDED
-}
-
-enum RefundStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-
-enum NotificationType {
-  RIDE_UPDATE
-  PAYMENT_UPDATE
-  VERIFICATION_UPDATE
-  SYSTEM
-  SECURITY
-}
-
-enum TrustedContactConsentStatus {
-  PENDING
-  ACCEPTED
-  REVOKED
-}
-
-enum EmergencyIncidentState {
-  TRIGGERED
-  ACKNOWLEDGED
-  RESPONDER_ASSIGNED
-  RESPONDER_EN_ROUTE
-  RESPONDER_ARRIVED
-  ESCALATED
-  RESOLVED
-}
-
-enum SupportTicketStatus {
-  OPEN
-  IN_PROGRESS
-  WAITING_USER
-  RESOLVED
-  CLOSED
-}
+enum VehicleType { CAR SUV SEDAN HATCHBACK VAN BUS OTHER }
+enum UserStatus { ACTIVE BLOCKED SUSPENDED DELETED }
+enum UserRole { RIDER DRIVER GUIDE ADMIN }
+enum VerificationStatus { PENDING UNDER_VERIFICATION VERIFIED REJECTED RESUBMITTED SUSPENDED BLOCKED }
+enum VerificationStepType { PROFILE DOCUMENTS LIVE_SESSION REVIEW }
+enum VerificationStepStatus { PENDING IN_PROGRESS COMPLETED FAILED }
+enum RideStatus { REQUESTED SEARCHING ASSIGNED DRIVER_ARRIVING IN_PROGRESS COMPLETED CANCELLED }
+enum RideAssignmentStatus { OFFERED ACCEPTED REJECTED EXPIRED }
+enum RideEventType { CREATED SEARCH_STARTED DRIVER_ASSIGNED DRIVER_ACCEPTED DRIVER_REJECTED DRIVER_ARRIVING RIDE_STARTED RIDE_COMPLETED CANCELLED LOCATION_RECORDED }
+enum PaymentStatus { PENDING AUTHORIZED CAPTURED FAILED REFUNDED }
+enum RefundStatus { PENDING PROCESSING COMPLETED FAILED }
+enum NotificationType { RIDE_UPDATE PAYMENT_UPDATE VERIFICATION_UPDATE SYSTEM SECURITY }
+enum TrustedContactConsentStatus { PENDING ACCEPTED REVOKED }
+enum EmergencyIncidentState { TRIGGERED ACKNOWLEDGED RESPONDER_ASSIGNED RESPONDER_EN_ROUTE RESPONDER_ARRIVED ESCALATED RESOLVED }
+enum SupportTicketStatus { OPEN IN_PROGRESS WAITING_USER RESOLVED CLOSED }
