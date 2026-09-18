@@ -186,7 +186,7 @@ export async function loginWithGoogle(input: {
       : email?.split("@")[0] || "Google user";
 
   const existingByFirebase = await findUserByFirebaseUid(firebaseUid);
-  let userId = existingByFirebase?.id;
+  let userId: string | undefined = existingByFirebase?.id;
 
   if (!userId && email) {
     const existingByEmail = await prisma.user.findUnique({
