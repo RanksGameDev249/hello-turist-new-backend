@@ -69,8 +69,6 @@ export async function listGuides(serviceCity?: string) {
     },
     select: {
       ...guideSelect,
-      user: { select: { name: true } },
-      // Keep verification information server-derived; the client must not infer it.
       user: {
         select: {
           name: true,
