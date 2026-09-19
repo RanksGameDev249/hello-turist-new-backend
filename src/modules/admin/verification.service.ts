@@ -23,9 +23,10 @@ export async function getVerificationRequest(id: string) {
 }
 
 export async function updateVerificationRequest(id: string, status: "APPROVED" | "REJECTED", reason?: string) {
+  const dbStatus = status === "APPROVED" ? "VERIFIED" : "REJECTED";
   return prisma.verificationRequest.update({
     where: { id },
-    data: { status, rejectionReason: status === "REJECTED" ? reason ?? null : null, reviewedAt: new Date() },
+    data: { status: dbStatus, rejectionReason: status === "REJECTED" ? reason ?? null : null, reviewedAt: new Date() },
     include: { user: { select: { id: true, name: true, username: true, email: true } }, steps: true, documents: true, liveSession: true },
   });
 }
