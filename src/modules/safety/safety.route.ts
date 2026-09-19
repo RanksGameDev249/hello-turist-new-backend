@@ -16,7 +16,7 @@ router.post("/trusted-contacts/invitations", createTrustedContactController);
 router.post("/trusted-contacts/invitations/:id/accept", acceptTrustedContactInvitationController);
 router.delete("/trusted-contacts/:id", deleteTrustedContactController);
 router.post("/trips/:id/share", shareTripController);
-router.post("/emergency/incidents", (req, res, next) => {
+router.post("/emergency/incidents", (req, res) => {
   let incidentId: string | undefined;
   const originalJson = res.json.bind(res);
   res.json = ((body: unknown) => {
@@ -31,7 +31,7 @@ router.post("/emergency/incidents", (req, res, next) => {
       void notifyTrustedContactsForEmergency(incidentId).catch(() => undefined);
     }
   });
-  return createEmergencyIncidentController(req, res, next);
+  return createEmergencyIncidentController(req, res);
 });
 router.get("/emergency/incidents/:id", getEmergencyIncidentController);
 router.post("/emergency/incidents/:id/acknowledge", acknowledgeEmergencyController);
