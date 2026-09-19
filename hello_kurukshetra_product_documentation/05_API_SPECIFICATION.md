@@ -42,8 +42,16 @@ Base path: `/api/v1`
 - POST `/rides/:id/cancel`
 - POST `/rides/:id/start`
 - POST `/rides/:id/complete`
+- POST `/rides/:id/interrupt`
+- POST `/rides/:id/recover`
 - GET `/rides/:id/events`
 - GET `/rides/history`
+
+### Recovery
+- `interrupt` is authenticated and allowed for the rider, current assigned driver, or admin while the ride is `IN_PROGRESS`.
+- `recover` is authenticated and allowed for the rider, current assigned driver, or admin while the ride is `INTERRUPTED`.
+- Recovery reuses the existing dispatch assignment model, selects an approved/available replacement driver when one is not explicitly supplied, and returns the ride to `ASSIGNED` with an `OFFERED` replacement assignment.
+- Recovery accepts an optional `idempotencyKey` to make repeated recovery requests safe.
 
 ## Dispatch
 - GET `/rides/:id/assignments`
