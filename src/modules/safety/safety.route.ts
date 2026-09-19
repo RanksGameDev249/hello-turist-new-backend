@@ -4,6 +4,7 @@ import {
   acceptTrustedContactInvitationController, acknowledgeEmergencyController, createEmergencyIncidentController, createTrustedContactController,
   deleteTrustedContactController, escalateEmergencyController, getEmergencyIncidentController, listTrustedContactsController,
   recordRideHeartbeatController, resolveEmergencyController, safetyOverviewController, shareTripController,
+  createRideRecordingConsentController,
 } from "./safety.controller";
 
 const router = Router();
@@ -20,4 +21,5 @@ router.post("/emergency/incidents/:id/acknowledge", acknowledgeEmergencyControll
 router.post("/emergency/incidents/:id/escalate", escalateEmergencyController);
 router.post("/emergency/incidents/:id/resolve", resolveEmergencyController);
 router.post("/rides/:id/heartbeat", recordRideHeartbeatController);
+router.post("/rides/:id/recording-consent", createRideRecordingConsentController);
 export default router;
