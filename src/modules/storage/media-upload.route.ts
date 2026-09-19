@@ -1,17 +1,23 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
+import { authMiddleware } from "../../middleware/auth";
 import { createPrivateMediaUploadUrl } from "./media-upload";
 
 const router = Router();
+router.use(authMiddleware);
 
-router.post("/upload-url", async (req: Request, res: Response) => {
+router.post("/upload-url", async (req, res) => {
   try {
-    const userId = (req as Request & { user?: { id: string } }).user?.id;
-    if (!userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    const userId = req.user!.id;
     const { contentType, size, purpose } = req.body ?? {};
-    const result = await createPrivateMediaUploadUrl({ userId, contentType: String(contentType ?? ""), size: Number(size), purpose: String(purpose ?? "general") });
-    return res.status(200).json(result);
+    const result = await createPrivateMediaUploadUrl({
+      userId,
+      contentType: String(contentType ?? ""),
+      size: Number(size),
+      purpose: String(purpose ?? "general"),
+    });
+    return res.status(200).json({ success: true, data: result, error: null });
   } catch (error) {
-    return res.status(400).json({ error: error instanceof Error ? error.message : "INVALID_MEDIA_UPLOAD" });
+    return res.status(400).json({ success: false, data: null, error: error instanceof Error ? error.message : "INVALID_MEDIA_UPLOAD" });
   }
 });
 
