@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 
@@ -11,11 +11,7 @@ function client() {
   if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
     throw new Error("R2_STORAGE_NOT_CONFIGURED");
   }
-  return new S3Client({
-    region: "auto",
-    endpoint,
-    credentials: { accessKeyId, secretAccessKey },
-  });
+  return new S3Client({ region: "auto", endpoint, credentials: { accessKeyId, secretAccessKey } });
 }
 
 export function createPrivateMediaKey(userId: string, kind: "ride-recording" | "sos-media", extension = "bin") {
@@ -32,4 +28,14 @@ export async function createPresignedDownload(key: string, expiresInSeconds = 30
   if (!bucket) throw new Error("R2_STORAGE_NOT_CONFIGURED");
   const { GetObjectCommand } = await import("@aws-sdk/client-s3");
   return getSignedUrl(client(), new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: expiresInSeconds });
+}
+
+export async function headPrivateObject(key: string) {
+  if (!bucket) throw new Error("R2_STORAGE_NOT_CONFIGURED");
+  try {
+    const result = await client().send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return { contentLength: Number(result.ContentLength ?? 0), contentType: result.ContentType ?? null };
+  } catch {
+    throw new Error("PRIVATE_OBJECT_NOT_FOUND");
+  }
 }

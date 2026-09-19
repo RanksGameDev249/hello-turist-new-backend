@@ -8,6 +8,7 @@
     "start": "tsx src/server.ts",
     "build": "prisma generate && tsc --noEmit",
     "test:trusted-contacts": "tsx tests/trusted-contacts.e2e.ts",
+    "maintenance:expire-ride-recordings": "tsx scripts/expire-ride-recordings.ts",
     "postinstall": "prisma generate && (prisma skills sync || exit 0)",
     "create-admin": "tsx scripts/create-admin.ts"
   },
