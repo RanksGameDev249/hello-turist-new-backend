@@ -33,10 +33,14 @@ export async function interruptRide(userId: string, rideId: string, data: Interr
     if (!current) throw new Error("RIDE_NOT_FOUND");
     if (String(current.status) !== "IN_PROGRESS") throw new Error("INVALID_RIDE_STATE");
     await tx.ride.update({ where: { id: rideId }, data: { status: "INTERRUPTED" as never } });
-    await tx.$executeRaw`
-      INSERT INTO "ride_events" ("id", "ride_id", "actor_user_id", "type", "payload", "created_at")
-      VALUES (gen_random_uuid(), ${rideId}::uuid, ${userId}::uuid, 'INTERRUPTED'::"RideEventType", ${JSON.stringify({ reason: data.reason })}::jsonb, NOW())
-    `;
+    await tx.rideEvent.create({
+      data: {
+        rideId,
+        actorUserId: userId,
+        type: "INTERRUPTED" as never,
+        payload: { reason: data.reason },
+      },
+    });
   });
 
   void notifyUser(ride.riderId, "Ride interrupted", "Your ride was interrupted. We are arranging a replacement driver.", { rideId, status: "INTERRUPTED", reason: data.reason }).catch(() => undefined);
@@ -52,8 +56,9 @@ export async function recoverRide(userId: string, rideId: string, data: RecoverR
   const excludedDriverIds = ride.assignments.map((a) => a.driverId);
   const idempotencyKey = data.idempotencyKey?.trim();
 
-  if (idempotencyKey) {
-    const existing = await prisma.$queryRaw<Array<{ assignment_id: string }>>`
+  const findExisting = async (tx: typeof prisma) => {
+    if (!idempotencyKey) return null;
+    const existing = await tx.$queryRaw<Array<{ assignment_id: string }>>`
       SELECT "payload"->>'assignmentId' AS assignment_id
       FROM "ride_events"
       WHERE "ride_id"=${rideId}::uuid
@@ -63,8 +68,11 @@ export async function recoverRide(userId: string, rideId: string, data: RecoverR
       ORDER BY "created_at" DESC
       LIMIT 1
     `;
-    if (existing[0]?.assignment_id) return prisma.rideAssignment.findUnique({ where: { id: existing[0].assignment_id } });
-  }
+    return existing[0]?.assignment_id ?? null;
+  };
+
+  const existingAssignmentId = await findExisting(prisma);
+  if (existingAssignmentId) return prisma.rideAssignment.findUnique({ where: { id: existingAssignmentId } });
 
   let driverId = data.driverId;
   if (driverId) {
@@ -95,19 +103,8 @@ export async function recoverRide(userId: string, rideId: string, data: RecoverR
     if (!current) throw new Error("RIDE_NOT_FOUND");
     if (String(current.status) !== "INTERRUPTED") throw new Error("INVALID_RIDE_STATE");
 
-    if (idempotencyKey) {
-      const existing = await tx.$queryRaw<Array<{ assignment_id: string }>>`
-        SELECT "payload"->>'assignmentId' AS assignment_id
-        FROM "ride_events"
-        WHERE "ride_id"=${rideId}::uuid
-          AND "type"='DRIVER_ASSIGNED'::"RideEventType"
-          AND "payload"->>'recovery'='true'
-          AND "payload"->>'idempotencyKey'=${idempotencyKey}
-        ORDER BY "created_at" DESC
-        LIMIT 1
-      `;
-      if (existing[0]?.assignment_id) return tx.rideAssignment.findUnique({ where: { id: existing[0].assignment_id } });
-    }
+    const existingInTx = await findExisting(tx as unknown as typeof prisma);
+    if (existingInTx) return tx.rideAssignment.findUnique({ where: { id: existingInTx } });
 
     const oldAccepted = current.assignments.find((a) => a.status === "ACCEPTED");
     if (oldAccepted) await tx.rideAssignment.update({ where: { id: oldAccepted.id }, data: { status: "REJECTED", rejectedAt: new Date() } });
