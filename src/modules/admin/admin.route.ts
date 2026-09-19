@@ -1,21 +1,23 @@
 import { Router } from "express";
-
 import { authMiddleware } from "../../middleware/auth";
 import { adminMiddleware } from "../../middleware/admin";
-import { decideVerification, updateUserRoleVerification } from "./admin.controller";
+import { updateUserRoleVerification } from "./admin.controller";
 import { decideVerificationRequest, getVerificationRequestById, getVerificationRequests } from "./verification.controller";
 import { getPeople, getPersonById } from "./people.controller";
 import { getBrandingController, updateBrandingController } from "./branding.controller";
+import { getRemoteScreen, publishRemoteScreen, saveRemoteScreenDraft } from "./remote-ui.controller";
 
 const router = Router();
-
-router.get("/verification/requests", authMiddleware, adminMiddleware, getVerificationRequests);
-router.get("/verification/requests/:id", authMiddleware, adminMiddleware, getVerificationRequestById);
-router.get("/people", authMiddleware, adminMiddleware, getPeople);
-router.get("/people/:id", authMiddleware, adminMiddleware, getPersonById);
-router.patch("/users/:userId/roles/:role", authMiddleware, adminMiddleware, updateUserRoleVerification);
-router.patch("/verification/requests/:id", authMiddleware, adminMiddleware, decideVerificationRequest);
-router.get("/branding", authMiddleware, adminMiddleware, getBrandingController);
-router.patch("/branding", authMiddleware, adminMiddleware, updateBrandingController);
-
+const admin = [authMiddleware, adminMiddleware] as const;
+router.get("/verification/requests", ...admin, getVerificationRequests);
+router.get("/verification/requests/:id", ...admin, getVerificationRequestById);
+router.get("/people", ...admin, getPeople);
+router.get("/people/:id", ...admin, getPersonById);
+router.patch("/users/:userId/roles/:role", ...admin, updateUserRoleVerification);
+router.patch("/verification/requests/:id", ...admin, decideVerificationRequest);
+router.get("/branding", ...admin, getBrandingController);
+router.patch("/branding", ...admin, updateBrandingController);
+router.get("/remote-ui/:screen", ...admin, getRemoteScreen);
+router.put("/remote-ui/:screen/draft", ...admin, saveRemoteScreenDraft);
+router.post("/remote-ui/:screen/publish", ...admin, publishRemoteScreen);
 export default router;
