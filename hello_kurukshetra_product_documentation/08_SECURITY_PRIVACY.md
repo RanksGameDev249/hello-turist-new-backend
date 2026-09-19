@@ -25,6 +25,8 @@ Collect only data required for a clear purpose. Explain sensitive permissions at
 - Apply retention windows.
 - Never expose public permanent live tracking.
 - Trip-sharing links must be temporary and revocable.
+- Cell-tower signals are a coarse fallback signal only; they are not collected continuously for unrelated features and are never exposed as public tracking data.
+- When GPS is unavailable during an operational ride/safety flow, the client may use the registered/serving cell snapshot to improve coarse region/network diagnostics, subject to Android permission and carrier/device availability.
 
 ## 4. Emergency privacy
 Nearby responders receive the minimum information necessary to act. Admin access is role-scoped and audited. Family/trusted contacts receive only the scope the Rider consented to.
@@ -36,7 +38,7 @@ Never store raw card credentials. Verify provider signatures and server-side pay
 Signals may include impossible travel, repeated cancellations, duplicate devices, suspicious payment patterns, fake-location indicators and document anomalies. Use signals to flag/review rather than automatically punish solely from uncertain detection.
 
 ## 7. Android permissions
-Request location, background location, notifications, camera, microphone, Bluetooth and activity/sensor permissions only when genuinely needed and supported by current Android policies.
+Request location, background location, notifications, camera, microphone, Bluetooth and activity/sensor permissions only when genuinely needed and supported by current Android policies. Notifications are mandatory for this product because ride/safety events depend on timely delivery.
 
 ## 8. Logging
 Never log passwords, tokens, card data, document contents or unnecessary precise location. Use correlation IDs for support/debugging.
@@ -50,5 +52,7 @@ Audit:
 - emergency actions
 - user suspension/blocking
 - admin configuration changes
+- wallet balance adjustments and redeem-code lifecycle
+
 ## Language/location privacy
 Use coarse location only for language recommendations. Do not continuously track location for this purpose. Never infer ethnicity, religion or other sensitive characteristics from language/location.
