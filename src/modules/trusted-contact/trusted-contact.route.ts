@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { authMiddleware } from "../../middleware/auth";
+import { accept, create, list, remove, revoke, update } from "./trusted-contact.controller";
+const router = Router();
+router.use(authMiddleware);
+router.get("/", list);
+router.post("/", create);
+router.patch("/:id", update);
+router.delete("/:id", remove);
+router.post("/:id/accept", accept);
+router.post("/:id/revoke", revoke);
+export default router;
