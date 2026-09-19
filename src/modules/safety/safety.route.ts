@@ -6,6 +6,7 @@ import {
   recordRideHeartbeatController, resolveEmergencyController, safetyOverviewController, shareTripController,
   createRideRecordingConsentController,
 } from "./safety.controller";
+import { notifyTrustedContactsForEmergency } from "./trusted-contact-notifier";
 
 const router = Router();
 router.use(authMiddleware);
@@ -15,7 +16,23 @@ router.post("/trusted-contacts/invitations", createTrustedContactController);
 router.post("/trusted-contacts/invitations/:id/accept", acceptTrustedContactInvitationController);
 router.delete("/trusted-contacts/:id", deleteTrustedContactController);
 router.post("/trips/:id/share", shareTripController);
-router.post("/emergency/incidents", createEmergencyIncidentController);
+router.post("/emergency/incidents", (req, res, next) => {
+  let incidentId: string | undefined;
+  const originalJson = res.json.bind(res);
+  res.json = ((body: unknown) => {
+    if (body && typeof body === "object") {
+      const candidate = body as { data?: { id?: unknown } };
+      if (typeof candidate.data?.id === "string") incidentId = candidate.data.id;
+    }
+    return originalJson(body);
+  }) as typeof res.json;
+  res.once("finish", () => {
+    if (res.statusCode >= 200 && res.statusCode < 300 && incidentId) {
+      void notifyTrustedContactsForEmergency(incidentId).catch(() => undefined);
+    }
+  });
+  return createEmergencyIncidentController(req, res, next);
+});
 router.get("/emergency/incidents/:id", getEmergencyIncidentController);
 router.post("/emergency/incidents/:id/acknowledge", acknowledgeEmergencyController);
 router.post("/emergency/incidents/:id/escalate", escalateEmergencyController);
