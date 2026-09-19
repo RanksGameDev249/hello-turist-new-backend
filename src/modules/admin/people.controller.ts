@@ -14,7 +14,9 @@ export async function getPeople(req: Request, res: Response) {
 }
 
 export async function getPersonById(req: Request, res: Response) {
-  const person = await getPerson(req.params.id);
+  const id = typeof req.params.id === "string" ? req.params.id : undefined;
+  if (!id) return res.status(400).json({ success: false, message: "Invalid person id" });
+  const person = await getPerson(id);
   if (!person) return res.status(404).json({ success: false, message: "Person not found" });
   return res.json({ success: true, data: person });
 }
