@@ -16,6 +16,7 @@ export async function listPeople(params: { page: number; limit: number; role?: P
     WHERE (${role}::text IS NULL OR r.role::text = ${role})
       AND (${status}::text IS NULL OR u.status::text = ${status})
       AND (${search}::text IS NULL OR u.name ILIKE ${search} OR u.username ILIKE ${search} OR COALESCE(u.email, '') ILIKE ${search})
+      AND (r.role::text = ANY(ARRAY['RIDER','DRIVER','GUIDE']))
     GROUP BY u.id ORDER BY u.created_at DESC LIMIT ${params.limit} OFFSET ${offset}
   `);
   const countRows = await prisma.$queryRaw<any[]>(Prisma.sql`
@@ -23,15 +24,16 @@ export async function listPeople(params: { page: number; limit: number; role?: P
     WHERE (${role}::text IS NULL OR r.role::text = ${role})
       AND (${status}::text IS NULL OR u.status::text = ${status})
       AND (${search}::text IS NULL OR u.name ILIKE ${search} OR u.username ILIKE ${search} OR COALESCE(u.email, '') ILIKE ${search})
+      AND (r.role::text = ANY(ARRAY['RIDER','DRIVER','GUIDE']))
   `);
   return { items: rows, total: countRows[0]?.count ?? 0, page: params.page, limit: params.limit };
 }
 
 export async function getPerson(id: string) {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT u.id, u.name, u.username, u.email, u.status, u.preferred_language AS "preferredLanguage", u.created_at AS "createdAt",
-      COALESCE(json_agg(json_build_object('role', r.role, 'verificationStatus', r.verification_status)) FILTER (WHERE r.id IS NOT NULL), '[]') AS roles
-    FROM "users" u LEFT JOIN "user_roles" r ON r.user_id = u.id WHERE u.id = ${id}::uuid GROUP BY u.id
+    SELECT u.id, u.name, u.username, u.email, u.phone, u.status, u.preferred_language AS "preferredLanguage", u.created_at AS "createdAt", u.updated_at AS "updatedAt",
+      COALESCE(json_agg(json_build_object('role', r.role, 'verificationStatus', r.verification_status, 'createdAt', r.created_at)) FILTER (WHERE r.id IS NOT NULL), '[]') AS roles
+    FROM "users" u LEFT JOIN "user_roles" r ON r.user_id = u.id WHERE u.id = ${id}::uuid AND r.role::text = ANY(ARRAY['RIDER','DRIVER','GUIDE']) GROUP BY u.id
   `);
   return rows[0] ?? null;
 }
