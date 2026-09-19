@@ -60,7 +60,7 @@ export async function recoverRide(userId: string, rideId: string, data: RecoverR
 
   const ride = await prisma.ride.findUnique({ where: { id: rideId } });
   if (!ride) throw new Error("RIDE_NOT_FOUND");
-  if (ride.status !== ("INTERRUPTED" as never)) throw new Error("INVALID_RIDE_STATE");
+  if ((ride.status as string) !== "INTERRUPTED") throw new Error("INVALID_RIDE_STATE");
 
   const candidate = data.replacementDriverId
     ? await prisma.$queryRaw<Array<{ id: string }>>`
