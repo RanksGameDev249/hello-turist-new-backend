@@ -18,16 +18,16 @@ router.post("/:id/accept", acceptRideController);
 router.post("/:id/reject", rejectRideController);
 router.post("/:id/location", addLocationController);
 router.get("/:id/locations", listLocationsController);
-router.post("/:id/events", (req, res, next) => {
+router.post("/:id/events", (req, res) => {
   const rideId = req.params.id;
   const isRideStarted = req.body?.type === "RIDE_STARTED";
-  if (!isRideStarted || typeof rideId !== "string") return addEventController(req, res, next);
+  if (!isRideStarted || typeof rideId !== "string") return addEventController(req, res);
   res.once("finish", () => {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       void notifyAcceptedTrustedContactsForRide(rideId, "RIDE_STARTED", { triggeredBy: req.user?.id }).catch(() => undefined);
     }
   });
-  return addEventController(req, res, next);
+  return addEventController(req, res);
 });
 router.get("/:id/events", listEventsController);
 
