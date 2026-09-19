@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createPresignedUploadUrl } from "../../core/r2";
+import { createPresignedUpload } from "../../core/r2";
 
 export const ALLOWED_MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4", "audio/m4a"] as const;
 export const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
@@ -17,6 +17,6 @@ export function preparePrivateMediaUpload(input: { userId: string; contentType: 
 
 export async function createPrivateMediaUploadUrl(input: { userId: string; contentType: string; size: number; purpose: string }) {
   const media = preparePrivateMediaUpload(input);
-  const uploadUrl = await createPresignedUploadUrl(media.key, media.contentType);
+  const uploadUrl = await createPresignedUpload(media.key, media.contentType);
   return { ...media, uploadUrl };
 }
