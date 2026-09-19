@@ -23,7 +23,7 @@ async function requireApprovedDriver(driverId: string) {
 
 export async function interruptRide(userId: string, rideId: string, data: InterruptRideInput) {
   const { ride, isAdmin } = await requireActor(rideId, userId);
-  if (ride.status !== "IN_PROGRESS") throw new Error("INVALID_RIDE_STATE");
+  if (String(ride.status) !== "IN_PROGRESS") throw new Error("INVALID_RIDE_STATE");
   const accepted = ride.assignments.find((a) => a.status === "ACCEPTED");
   if (!isAdmin && ride.riderId !== userId && accepted?.driverId !== userId) throw new Error("RIDE_ACCESS_DENIED");
 
@@ -31,7 +31,7 @@ export async function interruptRide(userId: string, rideId: string, data: Interr
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${rideId}))`;
     const current = await tx.ride.findUnique({ where: { id: rideId }, select: { status: true } });
     if (!current) throw new Error("RIDE_NOT_FOUND");
-    if (current.status !== "IN_PROGRESS") throw new Error("INVALID_RIDE_STATE");
+    if (String(current.status) !== "IN_PROGRESS") throw new Error("INVALID_RIDE_STATE");
     await tx.ride.update({ where: { id: rideId }, data: { status: "INTERRUPTED" as never } });
     await tx.$executeRaw`
       INSERT INTO "ride_events" ("id", "ride_id", "actor_user_id", "type", "payload", "created_at")
@@ -47,7 +47,7 @@ export async function interruptRide(userId: string, rideId: string, data: Interr
 
 export async function recoverRide(userId: string, rideId: string, data: RecoverRideInput) {
   const { ride } = await requireActor(rideId, userId);
-  if (ride.status !== "INTERRUPTED") throw new Error("INVALID_RIDE_STATE");
+  if (String(ride.status) !== "INTERRUPTED") throw new Error("INVALID_RIDE_STATE");
 
   const excludedDriverIds = ride.assignments.map((a) => a.driverId);
   const idempotencyKey = data.idempotencyKey?.trim();
@@ -93,7 +93,7 @@ export async function recoverRide(userId: string, rideId: string, data: RecoverR
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${rideId}))`;
     const current = await tx.ride.findUnique({ where: { id: rideId }, include: { assignments: { orderBy: { createdAt: "desc" } } } });
     if (!current) throw new Error("RIDE_NOT_FOUND");
-    if (current.status !== "INTERRUPTED") throw new Error("INVALID_RIDE_STATE");
+    if (String(current.status) !== "INTERRUPTED") throw new Error("INVALID_RIDE_STATE");
 
     if (idempotencyKey) {
       const existing = await tx.$queryRaw<Array<{ assignment_id: string }>>`
