@@ -17,6 +17,7 @@ import ratingRouter from "./modules/rating/rating.route";
 import supportRouter from "./modules/support/support.route";
 import promotionRouter from "./modules/promotion/promotion.route";
 import placeRouteRouter from "./modules/place-route/place-route.route";
+import trustedContactRouter from "./modules/trusted-contact/trusted-contact.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/wallet", walletRouter);
 app.use("/api/v1", safetyRouter);
+app.use("/api/v1/trusted-contacts", trustedContactRouter);
 app.use("/api/v1/places/saved", savedPlaceRouter);
 app.use("/api/v1", ratingRouter);
 app.use("/api/v1/support/tickets", supportRouter);
