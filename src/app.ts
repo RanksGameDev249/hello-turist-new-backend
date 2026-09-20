@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import { validateProductionIntegrations } from "./config/production";
 import { requestIdMiddleware } from "./middleware/request-id";
 import authRouter from "./modules/auth/auth.route";
 import usersRouter from "./modules/users/users.route";
@@ -24,11 +25,9 @@ import mediaUploadRouter from "./modules/storage/media-upload.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
+validateProductionIntegrations();
 const app = express();
 
-// The admin panel is deployed separately from the API, so allow its configured
-// origin(s) to call the authenticated JSON API. Keep credentials disabled: the
-// admin panel uses an explicit Bearer token rather than cookies.
 const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
