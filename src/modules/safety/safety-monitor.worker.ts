@@ -16,8 +16,9 @@ async function monitorActiveRides() {
   const now = Date.now();
   for (const ride of rides) {
     const latest = await prisma.rideLocation.findFirst({ where: { rideId: ride.id }, orderBy: { recordedAt: "desc" } });
-    const stale = !latest || now - latest.recordedAt.getTime() > staleAfterMs;
-    if (!stale) continue;
+    if (latest && now - latest.recordedAt.getTime() <= staleAfterMs) continue;
+    const lastAlert = await prisma.rideEvent.findFirst({ where: { rideId: ride.id, type: "LOCATION_RECORDED", payload: { path: ["kind"], equals: "HEARTBEAT_STALE" } }, orderBy: { createdAt: "desc" } });
+    if (lastAlert && now - lastAlert.createdAt.getTime() < staleAfterMs) continue;
     const payload = { kind: "HEARTBEAT_STALE", rideId: ride.id, lastLocationAt: latest?.recordedAt?.toISOString() ?? null, staleAfterMs };
     await prisma.rideEvent.create({ data: { rideId: ride.id, type: "LOCATION_RECORDED", payload } });
     await notifyOnce(ride.riderId, "Ride safety check", "We have not received a recent ride location update. Safety monitoring has been alerted.", { event: "HEARTBEAT_STALE", rideId: ride.id });
