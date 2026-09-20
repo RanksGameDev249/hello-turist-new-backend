@@ -6,6 +6,7 @@ import { decideVerificationRequest, getVerificationRequestById, getVerificationR
 import { getPeople, getPersonById } from "./people.controller";
 import { getBrandingController, updateBrandingController } from "./branding.controller";
 import { getRemoteScreen, publishRemoteScreen, saveRemoteScreenDraft } from "./remote-ui.controller";
+import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController } from "./ride-operations.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
@@ -20,4 +21,8 @@ router.patch("/branding", ...admin, updateBrandingController);
 router.get("/remote-ui/:screen", ...admin, getRemoteScreen);
 router.put("/remote-ui/:screen/draft", ...admin, saveRemoteScreenDraft);
 router.post("/remote-ui/:screen/publish", ...admin, publishRemoteScreen);
+router.get("/rides", ...admin, getOperationalRides);
+router.get("/rides/:id", ...admin, getOperationalRideById);
+router.post("/rides/:id/assign", ...admin, assignOperationalRideController);
+router.post("/rides/:id/cancel", ...admin, cancelOperationalRideController);
 export default router;
