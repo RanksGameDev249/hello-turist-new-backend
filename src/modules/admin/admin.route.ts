@@ -21,7 +21,7 @@ router.get("/branding", ...admin, getBrandingController);
 router.patch("/branding", ...admin, updateBrandingController);
 router.get("/remote-ui/:screen", ...admin, getRemoteScreen);
 router.put("/remote-ui/:screen/draft", ...admin, saveRemoteScreenDraft);
-router.post("/remote-ui/:screen/publish", ...admin, publishRemoteScreenDraft);
+router.post("/remote-ui/:screen/publish", ...admin, publishRemoteScreen);
 router.get("/rides", ...admin, getOperationalRides);
 router.get("/rides/:id", ...admin, getOperationalRideById);
 router.post("/rides/:id/assign", ...admin, assignOperationalRideController);
