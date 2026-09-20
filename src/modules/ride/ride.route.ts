@@ -3,6 +3,7 @@ import { authMiddleware } from "../../middleware/auth";
 import { acceptRideController, addEventController, addLocationController, assignRideController, cancelRideController, createRideController, getRideController, listEventsController, listLocationsController, listRidesController, rejectRideController } from "./ride.controller";
 import { fareQuoteController } from "./fare.controller";
 import { listDriverRidesController } from "./driver-ride.controller";
+import { listAssignmentsController, guideSearchController, acceptAssignmentController, rejectAssignmentController } from "./dispatch.controller";
 import { notifyAcceptedTrustedContactsForRide } from "../safety/trusted-contact-notifier";
 
 const router = Router();
@@ -11,6 +12,13 @@ router.get("/driver", listDriverRidesController);
 router.post("/fare-quote", fareQuoteController);
 router.post("/", createRideController);
 router.get("/", listRidesController);
+
+// Dispatch endpoints are intentionally registered before the generic ride actions.
+router.get("/:id/assignments", listAssignmentsController);
+router.post("/:id/guide-search", guideSearchController);
+router.post("/:id/assignments/:assignmentId/accept", acceptAssignmentController);
+router.post("/:id/assignments/:assignmentId/reject", rejectAssignmentController);
+
 router.get("/:id", getRideController);
 router.post("/:id/cancel", cancelRideController);
 router.post("/:id/assign", assignRideController);
