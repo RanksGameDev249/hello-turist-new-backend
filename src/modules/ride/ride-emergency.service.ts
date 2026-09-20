@@ -1,10 +1,11 @@
 import { prisma } from "../../core/prisma";
 import { notifyUser } from "../notification/notification.service";
+import { notifyAcceptedTrustedContactsForRide } from "../safety/trusted-contact-notifier";
 
 const COOLDOWN_MS = Number(process.env.RIDE_SOS_COOLDOWN_MS ?? 60_000);
 
 export async function triggerRideEmergency(userId: string, rideId: string, reason?: string) {
-  return prisma.$transaction(async tx => {
+  const result = await prisma.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${rideId}))`;
     const ride = await tx.ride.findUnique({ where: { id: rideId }, include: { assignments: { where: { status: "ACCEPTED" }, select: { driverId: true } } } });
     if (!ride) throw new Error("RIDE_NOT_FOUND");
@@ -16,9 +17,10 @@ export async function triggerRideEmergency(userId: string, rideId: string, reaso
     if (recent) throw new Error("SOS_COOLDOWN");
     const event = await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "SOS_TRIGGERED", payload: { reason: reason ?? "EMERGENCY" } } });
     return { event, riderId: ride.riderId, driverId: ride.assignments[0]?.driverId };
-  }).then(async result => {
-    const targets = [result.riderId, result.driverId].filter((id): id is string => Boolean(id && id !== userId));
-    await Promise.all(targets.map(id => notifyUser(id, "Ride emergency alert", "An emergency alert was triggered for your active ride.", { rideId, eventId: result.event.id, type: "SOS_TRIGGERED" }).catch(() => undefined)));
-    return result.event;
   });
+
+  const targets = [result.riderId, result.driverId].filter((id): id is string => Boolean(id && id !== userId));
+  await Promise.allSettled(targets.map(id => notifyUser(id, "Ride emergency alert", "An emergency alert was triggered for your active ride.", { rideId, eventId: result.event.id, type: "SOS_TRIGGERED" })));
+  await notifyAcceptedTrustedContactsForRide(rideId, "EMERGENCY_TRIGGERED", { eventId: result.event.id, reason: reason ?? "EMERGENCY", triggeredBy: userId });
+  return result.event;
 }
