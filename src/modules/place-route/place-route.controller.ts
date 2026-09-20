@@ -34,11 +34,13 @@ export async function searchPlacesController(req: Request, res: Response) {
 }
 
 export async function getPlaceController(req: Request, res: Response) {
-  const id = req.params.id;
-  if (typeof id !== "string" || !id) return errorResponse(res, req.requestId, 400, "VALIDATION_ERROR", "Place id is required");
+  const id = req.params.id ?? req.query.placeId;
+  if (typeof id !== "string" || !id.trim()) {
+    return errorResponse(res, req.requestId, 400, "VALIDATION_ERROR", "Place id is required");
+  }
 
   try {
-    const place = await adapter.getPlace(id);
+    const place = await adapter.getPlace(id.trim());
     return place
       ? successResponse(res, req.requestId, place)
       : errorResponse(res, req.requestId, 404, "PLACE_NOT_FOUND", "Place not found");
