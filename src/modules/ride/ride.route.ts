@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
 import { acceptRideController, addEventController, addLocationController, assignRideController, cancelRideController, createRideController, getRideController, listEventsController, listLocationsController, listRidesController, rejectRideController } from "./ride.controller";
+import { driverArrivingController, startRideController, completeRideController } from "./ride-action.controller";
 import { fareQuoteController } from "./fare.controller";
 import { listDriverRidesController } from "./driver-ride.controller";
 import { listAssignmentsController, guideSearchController, acceptAssignmentController, rejectAssignmentController } from "./dispatch.controller";
@@ -26,6 +27,16 @@ router.post("/:id/accept", acceptRideController);
 router.post("/:id/reject", rejectRideController);
 router.post("/:id/location", addLocationController);
 router.get("/:id/locations", listLocationsController);
+router.post("/:id/arriving", driverArrivingController);
+router.post("/:id/start", (req, res) => {
+  res.once("finish", () => {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      void notifyAcceptedTrustedContactsForRide(req.params.id as string, "RIDE_STARTED", { triggeredBy: req.user?.id }).catch(() => undefined);
+    }
+  });
+  return startRideController(req, res);
+});
+router.post("/:id/complete", completeRideController);
 router.post("/:id/events", (req, res) => {
   const rideId = req.params.id;
   const isRideStarted = req.body?.type === "RIDE_STARTED";
