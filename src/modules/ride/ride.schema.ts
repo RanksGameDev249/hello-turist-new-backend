@@ -1,30 +1,26 @@
 import { z } from "zod";
 
-const coordinate = z.number().min(-180).max(180);
+const latitude = z.number().finite().min(-90).max(90);
+const longitude = z.number().finite().min(-180).max(180);
 
 export const createRideSchema = z.object({
   pickupAddress: z.string().trim().min(2).max(500),
-  pickupLatitude: coordinate.refine((v) => v >= -90 && v <= 90, "Invalid latitude"),
-  pickupLongitude: coordinate,
+  pickupLatitude: latitude,
+  pickupLongitude: longitude,
   dropoffAddress: z.string().trim().min(2).max(500),
-  dropoffLatitude: coordinate.refine((v) => v >= -90 && v <= 90, "Invalid latitude"),
-  dropoffLongitude: coordinate,
+  dropoffLatitude: latitude,
+  dropoffLongitude: longitude,
   scheduledAt: z.string().datetime().optional(),
   notes: z.string().trim().max(1000).optional(),
 });
 
-export const cancelRideSchema = z.object({
-  reason: z.string().trim().min(2).max(500),
-});
-
-export const assignRideSchema = z.object({
-  driverId: z.string().uuid(),
-});
+export const cancelRideSchema = z.object({ reason: z.string().trim().min(2).max(500) });
+export const assignRideSchema = z.object({ driverId: z.string().uuid() });
 
 export const locationSchema = z.object({
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
-  accuracy: z.number().min(0).max(10000).optional(),
+  latitude,
+  longitude,
+  accuracy: z.number().finite().min(0).max(10000).optional(),
   recordedAt: z.string().datetime().optional(),
 });
 
