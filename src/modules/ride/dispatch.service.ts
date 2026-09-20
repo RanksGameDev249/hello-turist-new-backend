@@ -8,7 +8,6 @@ const assignmentInclude = {
       id: true,
       name: true,
       username: true,
-      profileImageUrl: true,
       driverProfile: {
         select: {
           bio: true,
@@ -28,7 +27,6 @@ const assignmentInclude = {
               seatCount: true,
               color: true,
               imageKey: true,
-              registrationNumber: true,
             },
             take: 3,
           },
@@ -47,12 +45,7 @@ async function requireRide(rideId: string) {
 async function requireRideMember(userId: string, rideId: string) {
   const ride = await prisma.ride.findUnique({
     where: { id: rideId },
-    select: {
-      id: true,
-      riderId: true,
-      status: true,
-      assignments: { select: { driverId: true } },
-    },
+    select: { id: true, riderId: true, assignments: { select: { driverId: true } } },
   });
   if (!ride) throw new Error("RIDE_NOT_FOUND");
 
@@ -62,7 +55,6 @@ async function requireRideMember(userId: string, rideId: string) {
   });
   const member = ride.riderId === userId || ride.assignments.some((a) => a.driverId === userId);
   if (!admin && !member) throw new Error("RIDE_ACCESS_DENIED");
-  return { ride, isAdmin: Boolean(admin) };
 }
 
 async function requireApprovedDriver(userId: string) {
@@ -75,11 +67,7 @@ async function requireApprovedDriver(userId: string) {
 
 export async function listAssignments(userId: string, rideId: string) {
   await requireRideMember(userId, rideId);
-  return prisma.rideAssignment.findMany({
-    where: { rideId },
-    orderBy: { createdAt: "desc" },
-    include: assignmentInclude,
-  });
+  return prisma.rideAssignment.findMany({ where: { rideId }, orderBy: { createdAt: "desc" }, include: assignmentInclude });
 }
 
 export async function searchGuides(userId: string, rideId: string, input: GuideSearchInput) {
@@ -92,7 +80,7 @@ export async function searchGuides(userId: string, rideId: string, input: GuideS
     if (!admin) throw new Error("RIDE_ACCESS_DENIED");
   }
 
-  const guides = await prisma.guideProfile.findMany({
+  return prisma.guideProfile.findMany({
     where: {
       isAvailable: true,
       ...(input.serviceCity ? { serviceCity: input.serviceCity } : {}),
@@ -115,11 +103,9 @@ export async function searchGuides(userId: string, rideId: string, input: GuideS
       languages: true,
       specialties: true,
       isAvailable: true,
-      user: { select: { id: true, name: true, username: true, profileImageUrl: true } },
+      user: { select: { id: true, name: true, username: true } },
     },
   });
-
-  return guides;
 }
 
 export async function acceptAssignment(userId: string, rideId: string, assignmentId: string) {
@@ -136,10 +122,7 @@ export async function acceptAssignment(userId: string, rideId: string, assignmen
   if (assignment.status !== "OFFERED") throw new Error("INVALID_ASSIGNMENT_STATE");
 
   const result = await prisma.$transaction(async (tx) => {
-    const accepted = await tx.rideAssignment.findFirst({
-      where: { rideId, status: "ACCEPTED", id: { not: assignmentId } },
-      select: { id: true },
-    });
+    const accepted = await tx.rideAssignment.findFirst({ where: { rideId, status: "ACCEPTED", id: { not: assignmentId } }, select: { id: true } });
     if (accepted) throw new Error("RIDE_ALREADY_ACCEPTED");
 
     const updated = await tx.rideAssignment.updateMany({
@@ -148,9 +131,7 @@ export async function acceptAssignment(userId: string, rideId: string, assignmen
     });
     if (updated.count !== 1) throw new Error("INVALID_ASSIGNMENT_STATE");
 
-    await tx.rideEvent.create({
-      data: { rideId, actorUserId: userId, type: "DRIVER_ACCEPTED", payload: { assignmentId } },
-    });
+    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_ACCEPTED", payload: { assignmentId } } });
     return tx.rideAssignment.findUnique({ where: { id: assignmentId }, include: assignmentInclude });
   });
 
@@ -177,16 +158,12 @@ export async function rejectAssignment(userId: string, rideId: string, assignmen
     });
     if (updated.count !== 1) throw new Error("INVALID_ASSIGNMENT_STATE");
 
-    const remaining = await tx.rideAssignment.count({
-      where: { rideId, status: { in: ["OFFERED", "ACCEPTED"] } },
-    });
+    const remaining = await tx.rideAssignment.count({ where: { rideId, status: { in: ["OFFERED", "ACCEPTED"] } } });
     if (remaining === 0 && ["ASSIGNED", "SEARCHING"].includes(String(ride.status))) {
       await tx.ride.update({ where: { id: rideId }, data: { status: "SEARCHING" } });
     }
 
-    await tx.rideEvent.create({
-      data: { rideId, actorUserId: userId, type: "DRIVER_REJECTED", payload: { assignmentId } },
-    });
+    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_REJECTED", payload: { assignmentId } } });
     return tx.rideAssignment.findUnique({ where: { id: assignmentId }, include: assignmentInclude });
   });
 
