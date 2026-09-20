@@ -6,6 +6,7 @@ import { fareQuoteController } from "./fare.controller";
 import { listDriverRidesController } from "./driver-ride.controller";
 import { listAssignmentsController, guideSearchController, acceptAssignmentController, rejectAssignmentController } from "./dispatch.controller";
 import { triggerRideEmergencyController } from "./ride-emergency.controller";
+import { rideLocationStreamController } from "./ride-realtime.sse";
 import { notifyAcceptedTrustedContactsForRide } from "../safety/trusted-contact-notifier";
 
 const router = Router();
@@ -19,6 +20,7 @@ router.post("/:id/guide-search", guideSearchController);
 router.post("/:id/assignments/:assignmentId/accept", acceptAssignmentController);
 router.post("/:id/assignments/:assignmentId/reject", rejectAssignmentController);
 router.get("/:id", getRideController);
+router.get("/:id/stream", rideLocationStreamController);
 router.post("/:id/cancel", cancelRideController);
 router.post("/:id/assign", assignRideController);
 router.post("/:id/accept", acceptRideController);
