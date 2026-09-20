@@ -1,5 +1,5 @@
 import { prisma } from "../../core/prisma";
-import { NotificationType } from "../../generated/prisma/client";
+import { NotificationType, Prisma } from "../../generated/prisma/client";
 import { purgeExpiredRideRecordings } from "../ride-safety/recording.service";
 
 const intervalMs = Math.max(15_000, Number(process.env.SAFETY_MONITOR_INTERVAL_MS || 60_000));
@@ -8,7 +8,7 @@ const staleAfterMs = Math.max(30_000, Number(process.env.RIDE_HEARTBEAT_STALE_MS
 async function notifyOnce(userId: string, title: string, body: string, data: Record<string, unknown>) {
   const existing = await prisma.notification.findFirst({ where: { userId, type: NotificationType.SECURITY, data: { path: ["event", "rideId"], equals: data.rideId as string } }, orderBy: { createdAt: "desc" } });
   if (existing && Date.now() - existing.createdAt.getTime() < staleAfterMs) return;
-  await prisma.notification.create({ data: { userId, type: NotificationType.SECURITY, title, body, data } });
+  await prisma.notification.create({ data: { userId, type: NotificationType.SECURITY, title, body, data: data as Prisma.InputJsonValue } });
 }
 
 async function monitorActiveRides() {
