@@ -20,13 +20,15 @@ export async function listPaymentsController(req: Request,res: Response){try{ret
 export async function getPaymentController(req: Request,res: Response){try{return successResponse(res,req.requestId,await getPayment(req.user!.id,getPaymentId(req)));}catch(e){return handleError(res,req.requestId,e);}}
 export async function createRefundController(req: Request,res: Response){const parsed=createRefundSchema.safeParse(req.body);if(!parsed.success)return errorResponse(res,req.requestId,400,"VALIDATION_ERROR","Invalid refund data",parsed.error.flatten());try{return successResponse(res,req.requestId,await createRefund(req.user!.id,getPaymentId(req),parsed.data),201);}catch(e){return handleError(res,req.requestId,e);}}
 export async function paymentWebhookController(req: Request,res: Response){
-  const webhookSecret=process.env.RAZORPAY_WEBHOOK_SECRET;
-  const signature=req.header("x-razorpay-signature");
+  const webhookSecret=(process.env.RAZORPAY_WEBHOOK_SECRET ?? process.env.PAYMENT_WEBHOOK_SECRET)?.trim();
+  const signature=req.header("x-razorpay-signature")?.trim();
   const rawBody=(req as Request & { rawBody?: Buffer }).rawBody;
   if(!webhookSecret||!signature||!rawBody)return errorResponse(res,req.requestId,401,"UNAUTHORIZED","Invalid Razorpay webhook credentials");
   const expected=crypto.createHmac("sha256",webhookSecret).update(rawBody).digest("hex");
-  if(expected.length!==signature.length||!crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(signature)))return errorResponse(res,req.requestId,401,"UNAUTHORIZED","Invalid Razorpay webhook signature");
-  const eventId=req.header("x-razorpay-event-id");
+  const expectedBuffer=Buffer.from(expected,"utf8");
+  const signatureBuffer=Buffer.from(signature,"utf8");
+  if(expectedBuffer.length!==signatureBuffer.length||!crypto.timingSafeEqual(expectedBuffer,signatureBuffer))return errorResponse(res,req.requestId,401,"UNAUTHORIZED","Invalid Razorpay webhook signature");
+  const eventId=req.header("x-razorpay-event-id")?.trim();
   const event=(req.body as { event?: string })?.event;
   if(!event||!eventId)return errorResponse(res,req.requestId,400,"VALIDATION_ERROR","Missing Razorpay webhook event or event id");
   const claim=await claimRazorpayWebhook(eventId,event,req.body?.payload);
