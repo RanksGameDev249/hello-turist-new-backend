@@ -3,7 +3,7 @@ const requiredByProduction: Record<string, string[]> = {
   maps: ["GOOGLE_MAPS_API_KEY"],
   fcm: ["FIREBASE_PROJECT_ID", "FCM_SERVICE_ACCOUNT_EMAIL", "FCM_PRIVATE_KEY"],
   razorpay: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"],
-  storage: ["R2_ENDPOINT", "R2_BUCKET", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"],
+  storage: ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"],
 };
 
 function missing(names: string[]) {
