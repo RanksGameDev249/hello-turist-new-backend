@@ -9,6 +9,9 @@ export const createRideSchema = z.object({
   dropoffAddress: z.string().trim().min(2).max(500),
   dropoffLatitude: coordinate.refine((v) => v >= -90 && v <= 90, "Invalid latitude"),
   dropoffLongitude: coordinate,
+  serviceType: z.enum(["RIDE_ONLY", "GUIDE_ONLY", "RIDE_AND_GUIDE"]).default("RIDE_ONLY"),
+  purpose: z.string().trim().min(2).max(120).optional(),
+  paymentMethod: z.enum(["RAZORPAY", "UPI", "CARD", "CASH", "WALLET"]).default("RAZORPAY"),
   scheduledAt: z.string().datetime().optional(),
   notes: z.string().trim().max(1000).optional(),
 });
