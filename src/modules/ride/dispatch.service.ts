@@ -121,8 +121,11 @@ export async function acceptAssignment(userId: string, rideId: string, assignmen
   if (assignment.driverId !== userId) throw new Error("ASSIGNMENT_ACCESS_DENIED");
   if (assignment.status !== "OFFERED") throw new Error("INVALID_ASSIGNMENT_STATE");
 
+  const driver = await prisma.driverProfile.findUnique({ where: { userId }, select: { isAvailable: true } });
+  if (!driver?.isAvailable) throw new Error("DRIVER_NOT_AVAILABLE");
+
   const result = await prisma.$transaction(async (tx) => {
-    const accepted = await tx.rideAssignment.findFirst({ where: { rideId, status: "ACCEPTED", id: { not: assignmentId } }, select: { id: true } });
+    const accepted = await tx.rideAssignment.findFirst({ where: { rideId, status: "ACCEPTED" }, select: { id: true } });
     if (accepted) throw new Error("RIDE_ALREADY_ACCEPTED");
 
     const updated = await tx.rideAssignment.updateMany({
@@ -133,7 +136,7 @@ export async function acceptAssignment(userId: string, rideId: string, assignmen
 
     await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_ACCEPTED", payload: { assignmentId } } });
     return tx.rideAssignment.findUnique({ where: { id: assignmentId }, include: assignmentInclude });
-  });
+  }, { isolationLevel: "Serializable" });
 
   if (result) void notifyUser(ride.riderId, "Driver accepted", "Your assigned driver accepted the ride.", { rideId, assignmentId, status: "ACCEPTED" }).catch(() => undefined);
   return result;
