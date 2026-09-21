@@ -10,6 +10,7 @@ import {
   registerWithPhone,
   googleAuth,
 } from "./social-auth.controller";
+import { requestOtpController, verifyOtpController } from "./otp.controller";
 import { authMiddleware } from "../../middleware/auth";
 import { redisRateLimit } from "../../middleware/rate-limit";
 
@@ -27,10 +28,24 @@ const refreshLimit = redisRateLimit({
   keyPrefix: "rl:refresh",
 });
 
+const otpRequestLimit = redisRateLimit({
+  windowSeconds: 15 * 60,
+  maxRequests: 5,
+  keyPrefix: "rl:otp-request",
+});
+
+const otpVerifyLimit = redisRateLimit({
+  windowSeconds: 15 * 60,
+  maxRequests: 10,
+  keyPrefix: "rl:otp-verify",
+});
+
 // Every new local account must include a mobile number.
 router.post("/register", authAttemptLimit, registerWithPhone);
 // Google account creation/login requires a mobile number before a backend session is issued.
 router.post("/google", authAttemptLimit, googleAuth);
+router.post("/otp/request", otpRequestLimit, requestOtpController);
+router.post("/otp/verify", otpVerifyLimit, verifyOtpController);
 router.post("/login", authAttemptLimit, login);
 router.post("/refresh", refreshLimit, refresh);
 router.post("/logout", authMiddleware, logout);
