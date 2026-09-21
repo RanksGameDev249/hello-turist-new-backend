@@ -16,18 +16,41 @@ Audio/video recording is a safety feature for active rides. It is not a general-
 4. Show an always-visible recording indicator while recording.
 5. Allow the rider to see that recording is active; do not provide a hidden/background mode.
 6. Stop recording automatically when the ride ends or is cancelled.
-7. Upload recordings only to private encrypted object storage using authenticated APIs.
+7. Upload recordings directly to Cloudinary using a short-lived backend-generated signed upload request.
+8. Store only the Cloudinary public ID/reference in the application database; recordings use Cloudinary's authenticated delivery type.
+
+## Backend recording API
+- `POST /api/v1/rides/:id/recording-consent` records the explicit consent event.
+- `POST /api/v1/rides/:id/recordings/upload-url` validates ride access and consent, then returns a short-lived Cloudinary signed upload request for `video/mp4` or `audio/m4a`.
+- The mobile client uploads the file directly to Cloudinary using the returned `uploadUrl` and `uploadParams`.
+- `POST /api/v1/rides/:id/recordings/complete` verifies that the authenticated Cloudinary asset exists and matches the requested media type before recording the database event.
+- `GET /api/v1/rides/:id/recordings/:recordingId/access` validates ride access and returns a signed Cloudinary delivery URL.
+- Expired recording events are processed by the existing safety retention worker and deleted from Cloudinary.
 
 ## Security
+- Cloudinary API secrets stay on the backend and are never returned to the mobile client.
+- Recordings are uploaded with `type=authenticated`; unauthenticated/public delivery is not used.
 - Store only private object references in the application database; do not expose public media URLs.
 - Restrict access to authorized safety/support workflows and audit access.
-- Encrypt in transit and at rest.
+- Encrypt media in transit and use Cloudinary authenticated media delivery for protected assets.
 - Apply a configurable, bounded retention period and delete expired media.
 - Validate ride membership/role server-side for every recording operation.
-- Never treat a client-provided recording-success flag as authoritative.
+- Verify the actual Cloudinary asset during finalize; never treat a client-provided recording-success flag as authoritative.
 
 ## Terms & Conditions
 By enabling ride recording, the user acknowledges that audio/video may be captured during the active ride for safety, incident investigation, and support purposes. Recording is limited to the active ride, protected access is used, and retention is limited according to the configured safety-retention policy. Required permissions and consent must be granted before recording starts. Where recording is mandatory for a driver or guide, that provider cannot start/accept the ride until the required permission and acknowledgement are complete.
 
+## Storage configuration
+Set these production variables:
+
+```env
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+RIDE_RECORDING_RETENTION_DAYS=30
+```
+
+Cloudinary is now the backend media-storage provider; the previous R2 variables are no longer required for production media/ride recordings.
+
 ## Implementation status
-The backend policy and consent schema are now documented. Android camera/microphone runtime permission UI, recording lifecycle, encrypted upload, retention worker, and server-side recording endpoints must be wired to this policy before the feature is represented as production-ready.
+Backend consent validation, authenticated Cloudinary signed uploads, upload verification, signed access URLs, generic media uploads, and retention deletion are implemented. Android camera/microphone runtime permission UI and the client-side recording lifecycle still need to be wired to these endpoints before the mobile feature is represented as fully production-ready.
