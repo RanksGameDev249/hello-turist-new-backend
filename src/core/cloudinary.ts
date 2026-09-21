@@ -36,8 +36,10 @@ export function getCloudinary() {
  */
 export function signCloudinaryUpload(params: Record<string, string | number>) {
   const client = ensureConfigured();
+  const signature = client.utils.api_sign_request(params, apiSecret!);
+
   return {
-    ...client.utils.api_sign_request(params, apiSecret!),
+    signature,
     cloudName: cloudName!,
     apiKey: apiKey!,
   };
