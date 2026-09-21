@@ -5,13 +5,11 @@ ALTER TABLE "rides"
 
 CREATE INDEX "rides_service_type_status_idx" ON "rides"("service_type", "status");
 
-CREATE TYPE "RideAssignmentStatus_new" AS ENUM ('OFFERED', 'ACCEPTED', 'REJECTED', 'EXPIRED');
-
 CREATE TABLE "guide_assignments" (
   "id" UUID NOT NULL,
   "ride_id" UUID NOT NULL,
   "guide_id" UUID NOT NULL,
-  "status" "RideAssignmentStatus_new" NOT NULL DEFAULT 'OFFERED',
+  "status" "RideAssignmentStatus" NOT NULL DEFAULT 'OFFERED',
   "assigned_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "accepted_at" TIMESTAMP(3),
   "rejected_at" TIMESTAMP(3),
@@ -21,9 +19,6 @@ CREATE TABLE "guide_assignments" (
   CONSTRAINT "guide_assignments_ride_id_fkey" FOREIGN KEY ("ride_id") REFERENCES "rides"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "guide_assignments_guide_id_fkey" FOREIGN KEY ("guide_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-
-ALTER TABLE "guide_assignments" ALTER COLUMN "status" TYPE "RideAssignmentStatus" USING "status"::text::"RideAssignmentStatus";
-DROP TYPE "RideAssignmentStatus_new";
 
 CREATE UNIQUE INDEX "guide_assignments_ride_id_guide_id_key" ON "guide_assignments"("ride_id", "guide_id");
 CREATE INDEX "guide_assignments_ride_id_status_idx" ON "guide_assignments"("ride_id", "status");
