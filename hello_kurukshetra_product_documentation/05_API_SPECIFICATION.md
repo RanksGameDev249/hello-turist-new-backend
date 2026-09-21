@@ -47,6 +47,12 @@ Base path: `/api/v1`
 - GET `/rides/:id/events`
 - GET `/rides/history`
 
+### Ride service types
+`POST /rides` accepts:
+- `serviceType`: `RIDE_ONLY`, `GUIDE_ONLY`, or `RIDE_AND_GUIDE`
+- `purpose`: optional rider-selected trip purpose
+- `paymentMethod`: `RAZORPAY`, `UPI`, `CARD`, `CASH`, or `WALLET`
+
 ### Recovery
 - `interrupt` is authenticated and allowed for the rider, current assigned driver, or admin while the ride is `IN_PROGRESS`.
 - `recover` is authenticated and allowed for the rider, current assigned driver, or admin while the ride is `INTERRUPTED`.
@@ -56,8 +62,14 @@ Base path: `/api/v1`
 ## Dispatch
 - GET `/rides/:id/assignments`
 - POST `/rides/:id/guide-search`
+- GET `/rides/:id/guide-assignments`
+- POST `/rides/:id/guide-assignments`
+- POST `/rides/:id/guide-assignments/:assignmentId/accept`
+- POST `/rides/:id/guide-assignments/:assignmentId/reject`
 - POST `/rides/:id/assignments/:assignmentId/accept`
 - POST `/rides/:id/assignments/:assignmentId/reject`
+
+Guide assignments are available only for `GUIDE_ONLY` and `RIDE_AND_GUIDE` services and require server-side guide verification and availability.
 
 ## Maps/Search
 - GET `/places/autocomplete`
@@ -97,6 +109,7 @@ Admin endpoints are under `/admin` and require explicit permissions:
 - Require idempotency keys for booking/payment mutations.
 - Enforce authorization server-side on every endpoint.
 - Never return more location precision or personal data than necessary.
+
 ## Language APIs
 - GET `/languages`
 - GET `/languages/recommended`
