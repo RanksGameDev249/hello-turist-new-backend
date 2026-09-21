@@ -52,6 +52,7 @@ model User {
   ridesAsRider         Ride[]                 @relation("RideRider")
   rideEvents           RideEvent[]            @relation("RideEventActor")
   rideAssignments      RideAssignment[]       @relation("RideDriver")
+  guideAssignments     GuideAssignment[]      @relation("RideGuide")
   rideLocations        RideLocation[]         @relation("RideLocationDriver")
   payments             Payment[]              @relation("PaymentPayer")
   notifications        Notification[]
@@ -184,6 +185,7 @@ model GuideProfile {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guideAssignments GuideAssignment[] @relation("GuideProfileAssignments")
   @@index([serviceCity])
   @@index([isAvailable])
   @@map("guide_profiles")
@@ -218,6 +220,9 @@ model Ride {
   dropoffAddress     String           @map("dropoff_address")
   dropoffLatitude    Decimal          @map("dropoff_latitude") @db.Decimal(10, 7)
   dropoffLongitude   Decimal          @map("dropoff_longitude") @db.Decimal(10, 7)
+  serviceType        String           @default("RIDE_ONLY") @map("service_type")
+  purpose            String?
+  paymentMethod      String           @default("RAZORPAY") @map("payment_method")
   scheduledAt        DateTime?        @map("scheduled_at")
   status             RideStatus       @default(REQUESTED)
   notes              String?
@@ -228,12 +233,14 @@ model Ride {
   updatedAt          DateTime         @updatedAt @map("updated_at")
   rider              User             @relation("RideRider", fields: [riderId], references: [id], onDelete: Cascade)
   assignments        RideAssignment[]
+  guideAssignments   GuideAssignment[]
   events             RideEvent[]
   locations          RideLocation[]
   payment            Payment?
   @@index([riderId, createdAt])
   @@index([status])
   @@index([scheduledAt])
+  @@index([serviceType, status])
   @@map("rides")
 }
 
@@ -252,6 +259,25 @@ model RideAssignment {
   @@index([rideId, status])
   @@index([driverId, status])
   @@map("ride_assignments")
+}
+
+model GuideAssignment {
+  id         String               @id @default(uuid()) @db.Uuid
+  rideId     String               @map("ride_id") @db.Uuid
+  guideId    String               @map("guide_id") @db.Uuid
+  status     RideAssignmentStatus @default(OFFERED)
+  assignedAt DateTime             @default(now()) @map("assigned_at")
+  acceptedAt DateTime?            @map("accepted_at")
+  rejectedAt DateTime?            @map("rejected_at")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+  ride       Ride                 @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  guide      User                 @relation("RideGuide", fields: [guideId], references: [id], onDelete: Cascade)
+  guideProfile GuideProfile       @relation("GuideProfileAssignments", fields: [guideId], references: [userId], onDelete: Cascade)
+  @@index([rideId, status])
+  @@index([guideId, status])
+  @@unique([rideId, guideId])
+  @@map("guide_assignments")
 }
 
 model RideEvent {
@@ -480,6 +506,7 @@ enum RideStatus {
   ASSIGNED
   DRIVER_ARRIVING
   IN_PROGRESS
+  INTERRUPTED
   COMPLETED
   CANCELLED
 }
@@ -503,6 +530,9 @@ enum RideEventType {
   CANCELLED
   LOCATION_RECORDED
   RECORDING_CONSENT
+  INTERRUPTED
+  RECOVERY_STARTED
+  RECOVERY_ASSIGNED
 }
 
 enum PaymentStatus {
