@@ -35,7 +35,7 @@ const otpRequestLimit = redisRateLimit({
 });
 
 const otpVerifyLimit = redisRateLimit({
-  windowSeconds: 15 * 15,
+  windowSeconds: 15 * 60,
   maxRequests: 10,
   keyPrefix: "rl:otp-verify",
 });
