@@ -118,7 +118,8 @@ export async function requestOtp(inputPhone: string) {
   try {
     await sendSms(phone, otp);
   } catch (error) {
-    await redis.del(otpKey(phone), cooldownKey(phone));
+    await redis.del(otpKey(phone));
+    await redis.del(cooldownKey(phone));
     throw error;
   }
 
@@ -147,7 +148,8 @@ export async function verifyOtp(inputPhone: string, inputOtp: string) {
     throw new Error("INVALID_OTP");
   }
 
-  await redis.del(otpKey(phone), cooldownKey(phone));
+  await redis.del(otpKey(phone));
+  await redis.del(cooldownKey(phone));
   const user = await findUserByPhone(phone);
   if (!user) throw new Error("PHONE_NOT_REGISTERED");
   return issueSession(user.id);
