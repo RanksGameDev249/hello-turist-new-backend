@@ -2,11 +2,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
 import { prisma } from "../../core/prisma";
-import { redis, connectRedis } from "../../core/redis";
-
-const OTP_TTL_SECONDS = 5 * 60;
-const RESEND_COOLDOWN_SECONDS = 60;
-const MAX_ATTEMPTS = 5;
+import { verifyFirebaseIdToken } from "../../config/firebase-admin";
 
 function normalizePhone(value: string) {
   const trimmed = value.trim();
@@ -16,58 +12,6 @@ function normalizePhone(value: string) {
   throw new Error("INVALID_PHONE_NUMBER");
 }
 
-function otpKey(phone: string) {
-  return `auth:otp:${phone}`;
-}
-
-function cooldownKey(phone: string) {
-  return `auth:otp:cooldown:${phone}`;
-}
-
-function hashOtp(otp: string) {
-  const pepper = process.env.OTP_PEPPER;
-  if (!pepper) throw new Error("OTP_NOT_CONFIGURED");
-  return crypto.createHmac("sha256", pepper).update(otp).digest("hex");
-}
-
-function generateOtp() {
-  return crypto.randomInt(100000, 1000000).toString();
-}
-
-async function sendSms(phone: string, otp: string) {
-  const provider = (process.env.SMS_PROVIDER ?? "twilio").toLowerCase();
-  if (provider !== "twilio") throw new Error("SMS_PROVIDER_NOT_SUPPORTED");
-
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM_NUMBER;
-  if (!accountSid || !authToken || !from) throw new Error("SMS_NOT_CONFIGURED");
-
-  const body = new URLSearchParams({
-    To: phone,
-    From: from,
-    Body: `Your Hello Kurukshetra verification code is ${otp}. It expires in 5 minutes.`,
-  });
-
-  const response = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-    }
-  );
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    console.error("SMS_PROVIDER_ERROR:", response.status, detail.slice(0, 500));
-    throw new Error("SMS_DELIVERY_FAILED");
-  }
-}
-
 async function findUserByPhone(phone: string) {
   const rows = await prisma.$queryRaw<Array<{ id: string }>>`
     SELECT id FROM users WHERE phone = ${phone} AND status = 'ACTIVE' LIMIT 1
@@ -75,13 +19,32 @@ async function findUserByPhone(phone: string) {
   return rows[0] ?? null;
 }
 
+async function findUserByFirebaseUid(firebaseUid: string) {
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM users WHERE firebase_uid = ${firebaseUid} AND status = 'ACTIVE' LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
 async function issueSession(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, username: true, email: true, status: true, preferredLanguage: true },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      status: true,
+      preferredLanguage: true,
+    },
   });
+
   if (!user) throw new Error("USER_NOT_FOUND");
   if (user.status !== "ACTIVE") throw new Error("ACCOUNT_NOT_ACTIVE");
+
+  const phoneRows = await prisma.$queryRaw<Array<{ phone: string | null }>>`
+    SELECT phone FROM users WHERE id = ${userId}::uuid LIMIT 1
+  `;
 
   const accessToken = jwt.sign(
     { sub: user.id, username: user.username },
@@ -90,6 +53,7 @@ async function issueSession(userId: string) {
   );
   const refreshToken = crypto.randomBytes(64).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+
   await prisma.refreshSession.create({
     data: {
       tokenHash,
@@ -98,59 +62,70 @@ async function issueSession(userId: string) {
     },
   });
 
-  return { accessToken, refreshToken, user };
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      ...user,
+      phone: phoneRows[0]?.phone ?? null,
+    },
+  };
 }
 
-export async function requestOtp(inputPhone: string) {
-  const phone = normalizePhone(inputPhone);
-  await connectRedis();
+/**
+ * Firebase Phone Authentication sends the SMS OTP and performs the client-side
+ * verification. The app then sends the Firebase ID token here. The backend
+ * verifies the token cryptographically and issues the application's session.
+ */
+export async function verifyFirebasePhoneToken(idToken: string, inputPhone?: string) {
+  if (!idToken.trim()) throw new Error("INVALID_FIREBASE_ID_TOKEN");
 
-  const existing = await findUserByPhone(phone);
-  if (!existing) throw new Error("PHONE_NOT_REGISTERED");
+  const decoded = await verifyFirebaseIdToken(idToken.trim());
+  const firebaseUid = decoded.uid;
+  const tokenPhone = typeof decoded.phone_number === "string" ? normalizePhone(decoded.phone_number) : null;
+  const requestedPhone = inputPhone?.trim() ? normalizePhone(inputPhone) : null;
 
-  if (await redis.exists(cooldownKey(phone))) throw new Error("OTP_RATE_LIMITED");
+  if (!tokenPhone) throw new Error("FIREBASE_PHONE_NUMBER_MISSING");
+  if (requestedPhone && requestedPhone !== tokenPhone) throw new Error("PHONE_MISMATCH");
 
-  const otp = generateOtp();
-  const record = JSON.stringify({ hash: hashOtp(otp), attempts: 0 });
-  await redis.set(otpKey(phone), record, { EX: OTP_TTL_SECONDS });
-  await redis.set(cooldownKey(phone), "1", { EX: RESEND_COOLDOWN_SECONDS });
+  let user = await findUserByFirebaseUid(firebaseUid);
+  if (!user) user = await findUserByPhone(tokenPhone);
+  if (!user) throw new Error("PHONE_NOT_REGISTERED");
 
-  try {
-    await sendSms(phone, otp);
-  } catch (error) {
-    await redis.del(otpKey(phone));
-    await redis.del(cooldownKey(phone));
-    throw error;
+  const owner = await findUserByFirebaseUid(firebaseUid);
+  if (!owner) {
+    const existingPhoneOwner = await findUserByPhone(tokenPhone);
+    if (existingPhoneOwner && existingPhoneOwner.id !== user.id) {
+      throw new Error("PHONE_ALREADY_EXISTS");
+    }
+
+    await prisma.$executeRaw`
+      UPDATE users
+      SET firebase_uid = ${firebaseUid}, phone = ${tokenPhone}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${user.id}::uuid
+    `;
   }
 
-  return { phone, expiresInSeconds: OTP_TTL_SECONDS, resendAfterSeconds: RESEND_COOLDOWN_SECONDS };
+  return issueSession(user.id);
+}
+
+/**
+ * Kept as an explicit migration response for old clients. OTP delivery must not
+ * be performed by the backend because Firebase Phone Authentication owns the
+ * SMS verification flow.
+ */
+export async function requestOtp(inputPhone: string) {
+  const phone = normalizePhone(inputPhone);
+  const existing = await findUserByPhone(phone);
+  if (!existing) throw new Error("PHONE_NOT_REGISTERED");
+  return {
+    phone,
+    provider: "firebase",
+    message: "Start Firebase Phone Authentication on the client and submit the Firebase ID token to /auth/otp/verify.",
+  };
 }
 
 export async function verifyOtp(inputPhone: string, inputOtp: string) {
-  const phone = normalizePhone(inputPhone);
-  const otp = inputOtp.trim();
-  if (!/^\d{6}$/.test(otp)) throw new Error("INVALID_OTP");
-
-  await connectRedis();
-  const raw = await redis.get(otpKey(phone));
-  if (!raw) throw new Error("OTP_EXPIRED");
-
-  const record = JSON.parse(raw) as { hash: string; attempts: number };
-  if (record.attempts >= MAX_ATTEMPTS) {
-    await redis.del(otpKey(phone));
-    throw new Error("OTP_ATTEMPTS_EXCEEDED");
-  }
-
-  if (hashOtp(otp) !== record.hash) {
-    record.attempts += 1;
-    const ttl = await redis.ttl(otpKey(phone));
-    if (ttl > 0) await redis.set(otpKey(phone), JSON.stringify(record), { EX: ttl });
-    throw new Error("INVALID_OTP");
-  }
-
-  await redis.del(otpKey(phone));
-  await redis.del(cooldownKey(phone));
-  const user = await findUserByPhone(phone);
-  if (!user) throw new Error("PHONE_NOT_REGISTERED");
-  return issueSession(user.id);
+  // inputOtp is now the Firebase ID token for backward-compatible controller wiring.
+  return verifyFirebasePhoneToken(inputOtp, inputPhone);
 }
