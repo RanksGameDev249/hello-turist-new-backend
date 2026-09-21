@@ -32,7 +32,7 @@ export async function searchAndOfferGuide(userId: string, rideId: string, guideI
     const a = existing
       ? await tx.guideAssignment.update({ where: { id: existing.id }, data: { status: "OFFERED", assignedAt: new Date(), acceptedAt: null, rejectedAt: null } })
       : await tx.guideAssignment.create({ data: { id: crypto.randomUUID(), rideId, guideId, status: "OFFERED", updatedAt: new Date() } });
-    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "GUIDE_ASSIGNED", payload: { guideId, assignmentId: a.id } } });
+    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_ASSIGNED", payload: { role: "GUIDE", guideId, assignmentId: a.id } } });
     return a;
   });
   void notifyUser(guideId, "New guide assignment", "You have a new guide assignment. Please accept or reject it.", { rideId, assignmentId: assignment.id, status: assignment.status }).catch(() => undefined);
@@ -62,7 +62,7 @@ export async function acceptGuideAssignment(userId: string, rideId: string, assi
     const updated = await tx.guideAssignment.updateMany({ where: { id: assignmentId, rideId, guideId: userId, status: "OFFERED" }, data: { status: "ACCEPTED", acceptedAt: new Date() } });
     if (updated.count !== 1) throw new Error("INVALID_ASSIGNMENT_STATE");
     if (ride.serviceType === "GUIDE_ONLY") await tx.ride.update({ where: { id: rideId }, data: { status: "ASSIGNED" } });
-    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "GUIDE_ACCEPTED", payload: { assignmentId } } });
+    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_ACCEPTED", payload: { role: "GUIDE", assignmentId } } });
     return tx.guideAssignment.findUnique({ where: { id: assignmentId } });
   });
   void notifyUser(ride.riderId, "Guide accepted", "Your guide accepted the trip.", { rideId, assignmentId, status: result?.status }).catch(() => undefined);
@@ -78,7 +78,7 @@ export async function rejectGuideAssignment(userId: string, rideId: string, assi
   const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.guideAssignment.updateMany({ where: { id: assignmentId, rideId, guideId: userId, status: "OFFERED" }, data: { status: "REJECTED", rejectedAt: new Date() } });
     if (updated.count !== 1) throw new Error("INVALID_ASSIGNMENT_STATE");
-    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "GUIDE_REJECTED", payload: { assignmentId } } });
+    await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_REJECTED", payload: { role: "GUIDE", assignmentId } } });
     return tx.guideAssignment.findUnique({ where: { id: assignmentId } });
   });
   const ride = await prisma.ride.findUnique({ where: { id: rideId }, select: { riderId: true } });
