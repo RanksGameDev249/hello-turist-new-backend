@@ -1,4 +1,5 @@
 import { prisma } from "../../core/prisma";
+import { isSupportedLanguage } from "../language/language.catalog";
 
 async function avatarFor(userId: string) {
   const rows = await prisma.$queryRaw<Array<{ avatar_url: string | null }>>`SELECT avatar_url FROM user_profile_media WHERE user_id=${userId}::uuid LIMIT 1`;
@@ -14,11 +15,18 @@ export async function getCurrentUser(userId: string) {
 export async function updateCurrentUser(userId: string, input: { name?: string; preferredLanguage?: string; avatarUrl?: string | null }) {
   const existingUser = await prisma.user.findUnique({ where: { id: userId } });
   if (!existingUser) throw new Error("USER_NOT_FOUND");
+  if (input.preferredLanguage !== undefined && !isSupportedLanguage(input.preferredLanguage)) throw new Error("UNSUPPORTED_LANGUAGE");
   const user = await prisma.user.update({ where: { id: userId }, data: { ...(input.name !== undefined && { name: input.name }), ...(input.preferredLanguage !== undefined && { preferredLanguage: input.preferredLanguage }) }, select: { id:true,name:true,username:true,email:true,status:true,preferredLanguage:true,createdAt:true,updatedAt:true,roles:{select:{role:true,verificationStatus:true}} } });
   if (input.avatarUrl !== undefined) {
     await prisma.$executeRaw`INSERT INTO user_profile_media (user_id,avatar_url,updated_at) VALUES (${userId}::uuid,${input.avatarUrl},NOW()) ON CONFLICT (user_id) DO UPDATE SET avatar_url=EXCLUDED.avatar_url,updated_at=NOW()`;
   }
   return { ...user, avatarUrl: await avatarFor(userId) };
+}
+
+export async function updatePreferredLanguage(userId: string, preferredLanguage: string) {
+  if (!isSupportedLanguage(preferredLanguage)) throw new Error("UNSUPPORTED_LANGUAGE");
+  const user = await prisma.user.update({ where: { id: userId }, data: { preferredLanguage }, select: { id: true, preferredLanguage: true } });
+  return user;
 }
 
 export async function getUserRoles(userId: string) {
