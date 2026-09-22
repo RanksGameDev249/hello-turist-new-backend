@@ -20,12 +20,15 @@ jobs:
       - run: npm run build
       - name: Security middleware tests
         run: npx tsx tests/security.middleware.test.ts
+      - name: E2E smoke
+        run: npm run test:e2e-smoke
+        env:
+          SMOKE_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
       - name: Trusted contacts E2E
         run: npm run test:trusted-contacts
         env:
           NODE_ENV: test
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-        continue-on-error: true
       - name: Production integration E2E
         run: npm run test:production-integrations
         env:
@@ -37,4 +40,3 @@ jobs:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-        continue-on-error: true
