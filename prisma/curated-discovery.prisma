@@ -1,0 +1,27 @@
+model CuratedPlace {
+  id           String   @id @default(uuid()) @db.Uuid
+  type         String
+  name         String
+  description  String?
+  history      String?
+  address      String
+  city         String?
+  latitude     Decimal  @db.Decimal(10, 7)
+  longitude    Decimal  @db.Decimal(10, 7)
+  images       Json     @default("[]")
+  amenities    Json     @default("[]")
+  priceFrom    Decimal? @map("price_from") @db.Decimal(12, 2)
+  phone        String?
+  website      String?
+  sponsorName  String?  @map("sponsor_name")
+  isFeatured   Boolean  @default(false) @map("is_featured")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([type, isActive])
+  @@index([city, isActive])
+  @@index([latitude, longitude])
+  @@map("curated_places")
+}
