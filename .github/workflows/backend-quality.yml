@@ -1,0 +1,40 @@
+name: Backend Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  production-integrations:
+    if: github.event_name == 'push' && vars.RUN_PRODUCTION_E2E == 'true'
+    runs-on: ubuntu-latest
+    environment: production-e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:production-integrations
+        env:
+          NODE_ENV: production
+          ALLOW_PRODUCTION_E2E: "true"
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_MAP_ORIGIN: ${{ secrets.E2E_MAP_ORIGIN }}
+          E2E_MAP_DESTINATION: ${{ secrets.E2E_MAP_DESTINATION }}
+          E2E_FCM_DEVICE_TOKEN: ${{ secrets.E2E_FCM_DEVICE_TOKEN }}
+          E2E_RAZORPAY_AMOUNT_PAISE: "100"
