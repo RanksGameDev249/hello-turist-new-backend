@@ -12,11 +12,13 @@ import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminControl
 import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
 import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller";
 import { getAdminAnalytics } from "./analytics.controller";
+import { getFinanceSummary } from "./finance.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
 
 router.get("/analytics", ...admin, requirePermission("analytics.read"), getAdminAnalytics);
+router.get("/finance/summary", ...admin, requirePermission("payments.read"), getFinanceSummary);
 
 router.get("/verification/requests", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequests);
 router.get("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequestById);
@@ -24,21 +26,17 @@ router.get("/people", ...admin, requirePermission("users.read"), getPeople);
 router.get("/people/:id", ...admin, requirePermission("users.read"), getPersonById);
 router.patch("/users/:userId/roles/:role", ...admin, requirePermission("drivers.verify", "guides.verify"), updateUserRoleVerification);
 router.patch("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), decideVerification);
-
 router.get("/branding", ...admin, requirePermission("branding.read"), getBrandingController);
 router.patch("/branding", ...admin, requirePermission("branding.manage"), updateBrandingController);
 router.get("/pricing/ride", ...admin, requirePermission("pricing.read"), getRidePricingController);
 router.patch("/pricing/ride", ...admin, requirePermission("pricing.manage"), updateRidePricingController);
-
 router.get("/remote-ui/:screen", ...admin, requirePermission("remote_ui.read"), getRemoteScreen);
 router.put("/remote-ui/:screen/draft", ...admin, requirePermission("remote_ui.manage"), saveRemoteScreenDraft);
 router.post("/remote-ui/:screen/publish", ...admin, requirePermission("remote_ui.manage"), publishRemoteScreen);
-
 router.get("/rides", ...admin, requirePermission("rides.read"), getOperationalRides);
 router.get("/rides/:id", ...admin, requirePermission("rides.read"), getOperationalRideById);
 router.post("/rides/:id/assign", ...admin, requirePermission("rides.manage"), assignOperationalRideController);
 router.post("/rides/:id/cancel", ...admin, requirePermission("rides.manage"), cancelOperationalRideController);
-
 router.get("/emergency/incidents", ...admin, requirePermission("emergency.read"), listEmergencyAdmin);
 router.get("/emergency/incidents/:id", ...admin, requirePermission("emergency.read"), getEmergencyAdmin);
 router.post("/emergency/incidents/:id/acknowledge", ...admin, requirePermission("emergency.manage"), acknowledgeEmergencyAdminController);
@@ -46,8 +44,6 @@ router.post("/emergency/incidents/:id/escalate", ...admin, requirePermission("em
 router.post("/emergency/incidents/:id/resolve", ...admin, requirePermission("emergency.manage"), resolveEmergencyAdminController);
 router.post("/emergency/incidents/:id/responders", ...admin, requirePermission("emergency.manage"), assignResponderAdmin);
 router.patch("/emergency/responders/:assignmentId", ...admin, requirePermission("emergency.manage"), responderStatusAdmin);
-
 router.get("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.read"), listAdminPermissions);
 router.put("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.manage"), updateAdminPermissions);
-
 export default router;
