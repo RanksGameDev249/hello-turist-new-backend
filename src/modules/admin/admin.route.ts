@@ -13,13 +13,14 @@ import { getRidePricingController, updateRidePricingController } from "./pricing
 import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller";
 import { getAdminAnalytics } from "./analytics.controller";
 import { getFinanceSummary } from "./finance.controller";
+import { listAdminNotifications, sendAdminNotification } from "./notification.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
-
 router.get("/analytics", ...admin, requirePermission("analytics.read"), getAdminAnalytics);
 router.get("/finance/summary", ...admin, requirePermission("payments.read"), getFinanceSummary);
-
+router.get("/notifications", ...admin, requirePermission("notifications.read"), listAdminNotifications);
+router.post("/notifications", ...admin, requirePermission("notifications.manage"), sendAdminNotification);
 router.get("/verification/requests", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequests);
 router.get("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequestById);
 router.get("/people", ...admin, requirePermission("users.read"), getPeople);
