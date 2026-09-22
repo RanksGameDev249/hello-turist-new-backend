@@ -40,6 +40,22 @@ Admin permission management is exposed through:
 
 The permission update endpoint validates the permission catalog, requires `admin.permissions.manage`, verifies the target is an active admin, writes an audit log, and prevents an administrator from removing their own `admin.permissions.manage` permission.
 
+## Production third-party E2E
+
+A live-provider smoke suite is available at `tests/production-integrations.e2e.ts` and is exposed as `npm run test:production-integrations`.
+
+The suite fails closed unless `NODE_ENV=production` (or the explicit `ALLOW_PRODUCTION_E2E=true` override is used). It verifies:
+
+- Backend health/reachability
+- Google Maps live Directions API route response
+- Firebase service-account OAuth and a live FCM message to `E2E_FCM_DEVICE_TOKEN`
+- Razorpay live order creation using production/test credentials; the order is intentionally **not captured**
+- Cloudinary authenticated upload using a unique E2E asset
+
+Secrets are supplied only through environment variables/secret manager and are never committed. The suite exits non-zero on any failed provider check so it can be used as a deployment gate. `E2E_MAP_ORIGIN`, `E2E_MAP_DESTINATION`, `E2E_FCM_DEVICE_TOKEN`, and `E2E_RAZORPAY_AMOUNT_PAISE` make the live checks configurable.
+
+AdMob SSV is deliberately not faked by this suite: production verification must use a real Google-signed SSV callback. Razorpay webhook settlement likewise remains an external webhook/deployment test rather than an artificial local signature.
+
 ## Safety recording requirements
 
 - Audio/video recording is restricted to active rides and must never run silently.
@@ -56,7 +72,8 @@ The permission update endpoint validates the permission catalog, requires `admin
 - Replace the in-memory development store with PostgreSQL repositories and transactions where still present.
 - Signed, short-lived access tokens and refresh-token rotation are implemented for development. Move refresh-token and OTP challenge storage to PostgreSQL/Redis before staging.
 - Complete Redis locks/presence, WebSocket authenticated channels and event replay.
-- Complete Google Maps, SMS/OTP, Razorpay settlement, FCM, object-storage and secure-webhook production configuration; credentials alone must not enable an adapter without server-side verification.
+- Run `npm run test:production-integrations` against the controlled production/staging environment with real provider credentials and a dedicated FCM test device token.
+- Complete Google Maps, Firebase/FCM, Razorpay settlement/webhook, object-storage and secure-webhook production configuration; credentials alone must not enable an adapter without server-side verification.
 - Complete provider verification and production dispatch ranking/reservation behavior where required by the source-of-truth docs.
 - Complete production ride-recording capture/upload/retention integration described in `docs/ride-safety-recording.md`.
 - Add/expand migrations, test suite, rate limiting, TLS, secrets manager and observability.
