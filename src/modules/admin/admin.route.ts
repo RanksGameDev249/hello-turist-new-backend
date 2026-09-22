@@ -8,6 +8,7 @@ import { getBrandingController, updateBrandingController } from "./branding.cont
 import { getRemoteScreen, publishRemoteScreen, saveRemoteScreenDraft } from "./remote-ui.controller";
 import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController } from "./ride-operations.controller";
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
+import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
@@ -19,6 +20,8 @@ router.patch("/users/:userId/roles/:role", ...admin, updateUserRoleVerification)
 router.patch("/verification/requests/:id", ...admin, decideVerification);
 router.get("/branding", ...admin, getBrandingController);
 router.patch("/branding", ...admin, updateBrandingController);
+router.get("/pricing/ride", ...admin, getRidePricingController);
+router.patch("/pricing/ride", ...admin, updateRidePricingController);
 router.get("/remote-ui/:screen", ...admin, getRemoteScreen);
 router.put("/remote-ui/:screen/draft", ...admin, saveRemoteScreenDraft);
 router.post("/remote-ui/:screen/publish", ...admin, publishRemoteScreen);
