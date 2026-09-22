@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import { validateProductionIntegrations } from "./config/production";
 import { requestIdMiddleware } from "./middleware/request-id";
+import { securityHeaders, rejectOversizedJson } from "./middleware/security.middleware";
 import authRouter from "./modules/auth/auth.route";
 import usersRouter from "./modules/users/users.route";
 import adminRouter from "./modules/admin/admin.route";
@@ -28,46 +29,21 @@ import { errorHandler } from "./middleware/error-handler";
 dotenv.config();
 validateProductionIntegrations();
 const app = express();
+app.disable("x-powered-by");
+app.use(securityHeaders);
 
-const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173").split(",").map((origin) => origin.trim()).filter(Boolean);
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  }
+  if (origin && allowedOrigins.includes(origin)) { res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Vary", "Origin"); }
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-Id");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   return next();
 });
-
-app.use(express.json({ verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf); } }));
+app.use(rejectOversizedJson);
+app.use(express.json({ limit: "2mb", verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf); } }));
 app.use(requestIdMiddleware);
 app.get("/health", (_req, res) => res.status(200).json({ success: true, data: { status: "ok" }, error: null, requestId: _req.requestId }));
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/users", usersRouter);
-app.use("/api/v1/admin", adminRouter);
-app.use("/api/v1/admin", adminOperationsRouter);
-app.use("/api/v1/verification", verificationRouter);
-app.use("/api/v1/providers", providerRouter);
-app.use("/api/v1/rides", recoveryRouter);
-app.use("/api/v1/rides", rideRouter);
-app.use("/api/v1/payments", paymentRouter);
-app.use("/api/v1/notifications", notificationRouter);
-app.use("/api/v1/wallet", walletRouter);
-app.use("/api/v1", safetyRouter);
-app.use("/api/v1/trusted-contacts", trustedContactRouter);
-app.use("/api/v1/media", mediaUploadRouter);
-app.use("/api/v1/places/saved", savedPlaceRouter);
-app.use("/api/v1", ratingRouter);
-app.use("/api/v1/support/tickets", supportRouter);
-app.use("/api/v1/promotions", promotionRouter);
-app.use("/api/v1/maps", placeRouteRouter);
-app.use("/api/v1", placeRouteApiRouter);
-app.use("/api/v1", languageRouter);
-app.use(errorHandler);
+app.use("/api/v1/auth", authRouter); app.use("/api/v1/users", usersRouter); app.use("/api/v1/admin", adminRouter); app.use("/api/v1/admin", adminOperationsRouter); app.use("/api/v1/verification", verificationRouter); app.use("/api/v1/providers", providerRouter); app.use("/api/v1/rides", recoveryRouter); app.use("/api/v1/rides", rideRouter); app.use("/api/v1/payments", paymentRouter); app.use("/api/v1/notifications", notificationRouter); app.use("/api/v1/wallet", walletRouter); app.use("/api/v1", safetyRouter); app.use("/api/v1/trusted-contacts", trustedContactRouter); app.use("/api/v1/media", mediaUploadRouter); app.use("/api/v1/places/saved", savedPlaceRouter); app.use("/api/v1", ratingRouter); app.use("/api/v1/support/tickets", supportRouter); app.use("/api/v1/promotions", promotionRouter); app.use("/api/v1/maps", placeRouteRouter); app.use("/api/v1", placeRouteApiRouter); app.use("/api/v1", languageRouter); app.use(errorHandler);
 export default app;
