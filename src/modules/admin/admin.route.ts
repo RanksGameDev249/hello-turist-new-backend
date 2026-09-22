@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
 import { adminMiddleware } from "../../middleware/admin";
 import { requirePermission } from "../../middleware/rbac";
+import { getAdminSettings, updateAdminSettings } from "./settings.controller";
 import { updateUserRoleVerification, decideVerification } from "./admin.controller";
 import { getVerificationRequestById, getVerificationRequests } from "./verification.controller";
 import { getPeople, getPersonById } from "./people.controller";
@@ -21,6 +22,8 @@ router.get("/analytics", ...admin, requirePermission("analytics.read"), getAdmin
 router.get("/finance/summary", ...admin, requirePermission("payments.read"), getFinanceSummary);
 router.get("/notifications", ...admin, requirePermission("notifications.read"), listAdminNotifications);
 router.post("/notifications", ...admin, requirePermission("notifications.manage"), sendAdminNotification);
+router.get("/settings", ...admin, requirePermission("settings.read"), getAdminSettings);
+router.patch("/settings", ...admin, requirePermission("settings.manage"), updateAdminSettings);
 router.get("/verification/requests", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequests);
 router.get("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequestById);
 router.get("/people", ...admin, requirePermission("users.read"), getPeople);
