@@ -23,6 +23,7 @@ import placeRouteApiRouter from "./modules/place-route/place-route.api.route";
 import trustedContactRouter from "./modules/trusted-contact/trusted-contact.route";
 import mediaUploadRouter from "./modules/storage/media-upload.route";
 import languageRouter from "./modules/language/language.route";
+import discoveryRouter from "./modules/discovery/discovery.route";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
@@ -69,5 +70,6 @@ app.use("/api/v1/promotions", promotionRouter);
 app.use("/api/v1/maps", placeRouteRouter);
 app.use("/api/v1", placeRouteApiRouter);
 app.use("/api/v1", languageRouter);
+app.use("/api/v1/discovery", discoveryRouter);
 app.use(errorHandler);
 export default app;
