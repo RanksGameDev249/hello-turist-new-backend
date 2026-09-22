@@ -10,7 +10,8 @@
     "test:trusted-contacts": "tsx tests/trusted-contacts.e2e.ts",
     "test:production-integrations": "NODE_ENV=production tsx tests/production-integrations.e2e.ts",
     "test:e2e-smoke": "tsx tests/e2e-smoke.ts",
-    "qa": "npm run build && npx tsx tests/security.middleware.test.ts && npm run test:e2e-smoke",
+    "test:core-e2e": "tsx tests/core-e2e-flows.ts",
+    "qa": "npm run build && npx tsx tests/security.middleware.test.ts && npm run test:e2e-smoke && npm run test:core-e2e",
     "postinstall": "prisma generate",
     "create-admin": "tsx scripts/create-admin.ts"
   },
@@ -30,7 +31,6 @@
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
     "redis": "^5.8.0",
-    "zod": "^4.6.1",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }
