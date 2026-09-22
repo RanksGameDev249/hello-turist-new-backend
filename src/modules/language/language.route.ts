@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
 import { RECOMMENDED_LANGUAGE_CODES, SUPPORTED_LANGUAGES } from "./language.catalog";
+import { setMyLanguage } from "./language.controller";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.get("/languages/recommended", (_req, res) => {
 });
 
 router.use(authMiddleware);
+router.patch("/users/me/language", setMyLanguage);
 
 export default router;
