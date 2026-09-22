@@ -44,32 +44,28 @@ function forbidden(req: Request, res: Response, permission: string) {
   });
 }
 
+async function hasAnyPermission(userId: string, required: readonly string[]) {
+  const rows = await prisma.$queryRaw<Array<{ permission: string }>>`
+    SELECT "permission"
+    FROM "admin_user_permissions"
+    WHERE "user_id" = ${userId}::uuid
+      AND "permission" = ANY(${required}::text[])
+  `;
+  return rows.length > 0;
+}
+
 export function requirePermission(...required: AdminPermission[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user?.id || required.length === 0) return forbidden(req, res, "unknown");
-
-      const rows = await prisma.$queryRaw<Array<{ permission: string }>>`
-        SELECT "permission"
-        FROM "admin_user_permissions"
-        WHERE "user_id" = ${req.user.id}::uuid
-          AND "permission" = ANY(${required}::text[])
-      `;
-
-      const granted = new Set(rows.map((row) => row.permission));
-      const missing = required.find((permission) => !granted.has(permission));
-      if (missing) return forbidden(req, res, missing);
-
+      if (!(await hasAnyPermission(req.user.id, required))) return forbidden(req, res, required.join(" or "));
       return next();
     } catch (error) {
       console.error("RBAC_PERMISSION_CHECK_ERROR:", error);
       return res.status(500).json({
         success: false,
         data: null,
-        error: {
-          code: "RBAC_CHECK_FAILED",
-          message: "Unable to verify admin permissions",
-        },
+        error: { code: "RBAC_CHECK_FAILED", message: "Unable to verify admin permissions" },
         requestId: req.requestId,
       });
     }
