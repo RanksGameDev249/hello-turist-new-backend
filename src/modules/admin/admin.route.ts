@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
 import { adminMiddleware } from "../../middleware/admin";
+import { requirePermission } from "../../middleware/rbac";
 import { updateUserRoleVerification, decideVerification } from "./admin.controller";
 import { getVerificationRequestById, getVerificationRequests } from "./verification.controller";
 import { getPeople, getPersonById } from "./people.controller";
@@ -9,31 +10,41 @@ import { getRemoteScreen, publishRemoteScreen, saveRemoteScreenDraft } from "./r
 import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController } from "./ride-operations.controller";
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
 import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
+import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
-router.get("/verification/requests", ...admin, getVerificationRequests);
-router.get("/verification/requests/:id", ...admin, getVerificationRequestById);
-router.get("/people", ...admin, getPeople);
-router.get("/people/:id", ...admin, getPersonById);
-router.patch("/users/:userId/roles/:role", ...admin, updateUserRoleVerification);
-router.patch("/verification/requests/:id", ...admin, decideVerification);
-router.get("/branding", ...admin, getBrandingController);
-router.patch("/branding", ...admin, updateBrandingController);
-router.get("/pricing/ride", ...admin, getRidePricingController);
-router.patch("/pricing/ride", ...admin, updateRidePricingController);
-router.get("/remote-ui/:screen", ...admin, getRemoteScreen);
-router.put("/remote-ui/:screen/draft", ...admin, saveRemoteScreenDraft);
-router.post("/remote-ui/:screen/publish", ...admin, publishRemoteScreen);
-router.get("/rides", ...admin, getOperationalRides);
-router.get("/rides/:id", ...admin, getOperationalRideById);
-router.post("/rides/:id/assign", ...admin, assignOperationalRideController);
-router.post("/rides/:id/cancel", ...admin, cancelOperationalRideController);
-router.get("/emergency/incidents", ...admin, listEmergencyAdmin);
-router.get("/emergency/incidents/:id", ...admin, getEmergencyAdmin);
-router.post("/emergency/incidents/:id/acknowledge", ...admin, acknowledgeEmergencyAdminController);
-router.post("/emergency/incidents/:id/escalate", ...admin, escalateEmergencyAdminController);
-router.post("/emergency/incidents/:id/resolve", ...admin, resolveEmergencyAdminController);
-router.post("/emergency/incidents/:id/responders", ...admin, assignResponderAdmin);
-router.patch("/emergency/responders/:assignmentId", ...admin, responderStatusAdmin);
+
+router.get("/verification/requests", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequests);
+router.get("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequestById);
+router.get("/people", ...admin, requirePermission("users.read"), getPeople);
+router.get("/people/:id", ...admin, requirePermission("users.read"), getPersonById);
+router.patch("/users/:userId/roles/:role", ...admin, requirePermission("drivers.verify", "guides.verify"), updateUserRoleVerification);
+router.patch("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), decideVerification);
+
+router.get("/branding", ...admin, requirePermission("branding.read"), getBrandingController);
+router.patch("/branding", ...admin, requirePermission("branding.manage"), updateBrandingController);
+router.get("/pricing/ride", ...admin, requirePermission("pricing.read"), getRidePricingController);
+router.patch("/pricing/ride", ...admin, requirePermission("pricing.manage"), updateRidePricingController);
+
+router.get("/remote-ui/:screen", ...admin, requirePermission("remote_ui.read"), getRemoteScreen);
+router.put("/remote-ui/:screen/draft", ...admin, requirePermission("remote_ui.manage"), saveRemoteScreenDraft);
+router.post("/remote-ui/:screen/publish", ...admin, requirePermission("remote_ui.manage"), publishRemoteScreen);
+
+router.get("/rides", ...admin, requirePermission("rides.read"), getOperationalRides);
+router.get("/rides/:id", ...admin, requirePermission("rides.read"), getOperationalRideById);
+router.post("/rides/:id/assign", ...admin, requirePermission("rides.manage"), assignOperationalRideController);
+router.post("/rides/:id/cancel", ...admin, requirePermission("rides.manage"), cancelOperationalRideController);
+
+router.get("/emergency/incidents", ...admin, requirePermission("emergency.read"), listEmergencyAdmin);
+router.get("/emergency/incidents/:id", ...admin, requirePermission("emergency.read"), getEmergencyAdmin);
+router.post("/emergency/incidents/:id/acknowledge", ...admin, requirePermission("emergency.manage"), acknowledgeEmergencyAdminController);
+router.post("/emergency/incidents/:id/escalate", ...admin, requirePermission("emergency.manage"), escalateEmergencyAdminController);
+router.post("/emergency/incidents/:id/resolve", ...admin, requirePermission("emergency.manage"), resolveEmergencyAdminController);
+router.post("/emergency/incidents/:id/responders", ...admin, requirePermission("emergency.manage"), assignResponderAdmin);
+router.patch("/emergency/responders/:assignmentId", ...admin, requirePermission("emergency.manage"), responderStatusAdmin);
+
+router.get("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.read"), listAdminPermissions);
+router.put("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.manage"), updateAdminPermissions);
+
 export default router;
