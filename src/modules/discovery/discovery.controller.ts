@@ -3,6 +3,7 @@ import { errorResponse, successResponse } from "../../core/api-response";
 import { createCuratedPlaceSchema, curatedPlaceIdSchema, publicDiscoveryQuerySchema, updateCuratedPlaceSchema } from "./discovery.schema";
 import { createCuratedPlace, deleteCuratedPlace, getCuratedPlace, listPublishedDiscovery, updateCuratedPlace } from "./discovery.service";
 import { listHomeDiscoveries, listMapPlaces } from "./discovery.views";
+import { listAllCuratedPlaces } from "./discovery.admin.service";
 import { writeAuditLog } from "../admin/audit.service";
 
 function fail(req: Request, res: Response, error: unknown) {
@@ -16,25 +17,20 @@ export async function listDiscoveryController(req: Request, res: Response) {
   if (!parsed.success) return errorResponse(res, req.requestId, 400, "VALIDATION_ERROR", "Invalid discovery query", parsed.error.flatten());
   try { return successResponse(res, req.requestId, await listPublishedDiscovery(parsed.data)); } catch (e) { return fail(req, res, e); }
 }
-
 export async function listMapPlacesController(req: Request, res: Response) {
   try { return successResponse(res, req.requestId, await listMapPlaces(Math.min(Math.max(Number(req.query.limit) || 100, 1), 100))); } catch (e) { return fail(req, res, e); }
 }
-
 export async function listHomeDiscoveriesController(req: Request, res: Response) {
   try { return successResponse(res, req.requestId, await listHomeDiscoveries(Math.min(Math.max(Number(req.query.limit) || 50, 1), 100))); } catch (e) { return fail(req, res, e); }
 }
-
 export async function getDiscoveryController(req: Request, res: Response) {
   const parsed = curatedPlaceIdSchema.safeParse(req.params);
   if (!parsed.success) return errorResponse(res, req.requestId, 400, "VALIDATION_ERROR", "Invalid curated place id");
   try { return successResponse(res, req.requestId, await getCuratedPlace(parsed.data.id)); } catch (e) { return fail(req, res, e); }
 }
-
 export async function listAdminDiscoveryController(req: Request, res: Response) {
-  try { return successResponse(res, req.requestId, await listPublishedDiscovery({ type: typeof req.query.type === "string" ? req.query.type : undefined, city: typeof req.query.city === "string" ? req.query.city : undefined, limit: Math.min(Math.max(Number(req.query.limit) || 100, 1), 200) })); } catch (e) { return fail(req, res, e); }
+  try { return successResponse(res, req.requestId, await listAllCuratedPlaces({ type: typeof req.query.type === "string" ? req.query.type : undefined, city: typeof req.query.city === "string" ? req.query.city : undefined, limit: Math.min(Math.max(Number(req.query.limit) || 100, 1), 200) })); } catch (e) { return fail(req, res, e); }
 }
-
 export async function createAdminDiscoveryController(req: Request, res: Response) {
   const parsed = createCuratedPlaceSchema.safeParse(req.body);
   if (!parsed.success) return errorResponse(res, req.requestId, 400, "VALIDATION_ERROR", "Invalid curated place", parsed.error.flatten());
@@ -44,7 +40,6 @@ export async function createAdminDiscoveryController(req: Request, res: Response
     return successResponse(res, req.requestId, item, 201);
   } catch (e) { return fail(req, res, e); }
 }
-
 export async function updateAdminDiscoveryController(req: Request, res: Response) {
   const id = curatedPlaceIdSchema.safeParse(req.params);
   const parsed = updateCuratedPlaceSchema.safeParse(req.body);
@@ -55,7 +50,6 @@ export async function updateAdminDiscoveryController(req: Request, res: Response
     return successResponse(res, req.requestId, item);
   } catch (e) { return fail(req, res, e); }
 }
-
 export async function deleteAdminDiscoveryController(req: Request, res: Response) {
   const id = curatedPlaceIdSchema.safeParse(req.params);
   if (!id.success) return errorResponse(res, req.requestId, 400, "VALIDATION_ERROR", "Invalid curated place id");
