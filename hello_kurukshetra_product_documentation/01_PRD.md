@@ -52,6 +52,17 @@ Home, search, saved places, booking, purpose selection, driver/guide discovery, 
 ### Maps
 Current location, search/autocomplete, pickup/drop selection, routes, ETA, navigation handoff, satellite/terrain/standard styles and 3D/tilt only where supported.
 
+### Curated map and discovery content
+- The product must not expose a generic merchant/shop directory through its curated map/discovery layer.
+- Map discovery markers must come only from records explicitly added and activated by Hello Kurukshetra Admin.
+- The curated map view must include only `SPONSOR` and `HOMESTAY` records created by Admin; third-party merchant/shop listings must not be returned by this API.
+- Home discovery must include Admin-managed `HOMESTAY` listings and `HISTORICAL_PLACE` listings.
+- Historical places must support a title, description and historical information/history, together with address and map coordinates.
+- Homestays must support name, description, address, latitude/longitude, images, amenities and optional starting price/contact/website information.
+- Admin must be able to add, edit, activate/deactivate and feature curated places and set their exact map coordinates.
+- Only active curated records are visible to Riders. Deactivated records must disappear from the Home and curated map APIs.
+- The app's underlying map provider may still display its own base-map labels according to the provider's map configuration; the curated discovery API itself returns only Hello Kurukshetra-managed records.
+
 ### Ride booking
 Pickup, destination, service type, purpose, payment method, optional Guide. Display fare breakdown before confirmation.
 
@@ -80,7 +91,7 @@ Freeze state, record interruption, preserve fare ledger, dispatch replacement, n
 1–5 ratings, predefined feedback, optional text and issue reporting.
 
 ### Admin
-Dashboard, user management, verification queue, ride operations, emergency command center, notifications, promotions, configuration, finance, analytics, support and RBAC.
+Dashboard, user management, verification queue, ride operations, emergency command center, notifications, promotions, configuration, finance, analytics, support and RBAC. Admin also manages curated sponsors, homestays and historical places, including location coordinates and publication state.
 
 ## 6. Critical acceptance principles
 - No unverified Driver/Guide can receive customer assignments.
@@ -90,6 +101,8 @@ Dashboard, user management, verification queue, ride operations, emergency comma
 - Reconnect/retry cannot create duplicate rides or payments.
 - Admin actions affecting users, trips, money or emergencies are audited.
 - Location access is minimized and permission-aware.
+- Curated map results contain only Admin-managed active sponsor and homestay records.
+- Curated home discovery contains only Admin-managed active homestays and historical places.
 
 ## 7. Success metrics
 - Booking completion rate
@@ -106,7 +119,7 @@ Dashboard, user management, verification queue, ride operations, emergency comma
 - Notification delivery/acknowledgement rate
 
 ## 8. Business rules
-Business-critical rules such as fares, commissions, search radius, dispatch timeout, heartbeat thresholds and notification policy must be configurable server-side.
+Business-critical rules such as fares, commissions, search radius, dispatch timeout, heartbeat thresholds and notification policy must be configurable server-side. Curated discovery publication, map visibility and featured status are also Admin-controlled.
 
 ## 9. Release gates
 Production release requires security review, payment verification testing, background-location review, privacy review, emergency workflow simulation, load testing and end-to-end acceptance testing.
