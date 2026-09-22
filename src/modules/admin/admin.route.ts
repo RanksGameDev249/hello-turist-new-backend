@@ -11,9 +11,12 @@ import { getOperationalRides, getOperationalRideById, assignOperationalRideContr
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
 import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
 import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller";
+import { getAdminAnalytics } from "./analytics.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
+
+router.get("/analytics", ...admin, requirePermission("analytics.read"), getAdminAnalytics);
 
 router.get("/verification/requests", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequests);
 router.get("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequestById);
