@@ -11,9 +11,10 @@ export const addVerificationDocumentSchema = z.object({
   expiryDate: z.coerce.date().optional(),
 });
 
+// The application owns the live-verification lifecycle. Clients cannot choose
+// a third-party provider or mark a live session as completed. Completion is
+// performed by an authorized admin after manual review.
 export const addLiveSessionSchema = z.object({
-  providerReference: z.string().trim().min(1).max(255),
-  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED"]).default("PENDING"),
+  status: z.enum(["PENDING", "IN_PROGRESS"]).default("IN_PROGRESS"),
   startedAt: z.coerce.date().optional(),
-  completedAt: z.coerce.date().optional(),
 });
