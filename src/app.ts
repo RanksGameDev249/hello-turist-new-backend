@@ -24,6 +24,7 @@ import trustedContactRouter from "./modules/trusted-contact/trusted-contact.rout
 import mediaUploadRouter from "./modules/storage/media-upload.route";
 import languageRouter from "./modules/language/language.route";
 import discoveryRouter from "./modules/discovery/discovery.route";
+import { getBranding } from "./modules/admin/branding.service";
 import { errorHandler } from "./middleware/error-handler";
 
 dotenv.config();
@@ -49,6 +50,10 @@ app.use((req, res, next) => {
 app.use(express.json({ verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf); } }));
 app.use(requestIdMiddleware);
 app.get("/health", (_req, res) => res.status(200).json({ success: true, data: { status: "ok" }, error: null, requestId: _req.requestId }));
+app.get("/api/v1/branding", async (_req, res, next) => {
+  try { return res.json({ success: true, data: await getBranding(), error: null }); }
+  catch (error) { return next(error); }
+});
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/admin", adminRouter);
