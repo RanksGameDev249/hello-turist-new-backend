@@ -102,6 +102,10 @@ export async function submitVerificationForReview(userId: string, requestId: str
   if (!request) throw new Error("VERIFICATION_REQUEST_NOT_FOUND");
   if (!isEditableStatus(request.status)) throw new Error("VERIFICATION_REQUEST_LOCKED");
   if (request.documents.length === 0) throw new Error("DOCUMENTS_REQUIRED");
+  const profileExists = request.role === "DRIVER"
+    ? await prisma.driverProfile.findUnique({ where: { userId }, select: { id: true } })
+    : await prisma.guideProfile.findUnique({ where: { userId }, select: { id: true } });
+  if (!profileExists) throw new Error("PROFILE_REQUIRED");
   if (!request.liveSession || request.liveSession.status !== "IN_PROGRESS") throw new Error("LIVE_SESSION_REQUIRED");
   const expired = request.documents.some((document) => document.expiryDate && document.expiryDate <= new Date());
   if (expired) throw new Error("DOCUMENT_EXPIRED");
