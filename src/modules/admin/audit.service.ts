@@ -51,6 +51,7 @@ export async function listAdminUsers(params: { page: number; limit: number; stat
   const countRows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COUNT(*)::int AS count FROM "users" u
     WHERE (${params.status ?? null}::text IS NULL OR u.status::text = ${params.status ?? null})
+      AND EXISTS (SELECT 1 FROM "user_roles" ar WHERE ar.user_id = u.id AND ar.role = 'ADMIN')
   `);
   return { items: rows, total: countRows[0]?.count ?? 0, page: params.page, limit: params.limit };
 }
