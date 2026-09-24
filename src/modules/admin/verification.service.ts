@@ -18,10 +18,10 @@ export async function getVerificationRequest(id: string) {
 export async function updateVerificationRequest(id: string, status: "VERIFIED" | "REJECTED", reason?: string) {
   const existing = await prisma.verificationRequest.findUnique({ where: { id }, include: { documents: true, liveSession: true } });
   if (!existing) throw new Error("VERIFICATION_REQUEST_NOT_FOUND");
-  if (existing.status === "VERIFIED") throw new Error("VERIFICATION_ALREADY_DECIDED");
+  if (!["PENDING","UNDER_VERIFICATION","RESUBMITTED"].includes(existing.status)) throw new Error("INVALID_VERIFICATION_STATE");
 
   if (status === "VERIFIED") {
-    if (existing.status !== "UNDER_VERIFICATION") throw new Error("INVALID_VERIFICATION_STATE");
+
     if (existing.documents.length === 0) throw new Error("DOCUMENTS_REQUIRED");
     if (!existing.liveSession || existing.liveSession.status !== "IN_PROGRESS") throw new Error("LIVE_SESSION_REQUIRED");
     if (existing.documents.some((document) => document.expiryDate && document.expiryDate <= new Date())) throw new Error("DOCUMENT_EXPIRED");
@@ -30,7 +30,7 @@ export async function updateVerificationRequest(id: string, status: "VERIFIED" |
   const result = await prisma.$transaction(async (tx) => {
     const now = new Date();
     if (status === "VERIFIED") {
-      await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "VERIFIED" } });
+      await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "APPROVED" } });
       await tx.verificationLiveSession.update({ where: { verificationRequestId: id }, data: { status: "COMPLETED", completedAt: now } });
       await tx.verificationStep.updateMany({ where: { verificationRequestId: id }, data: { status: "COMPLETED", completedAt: now } });
       await tx.userRoleAssignment.update({ where: { userId_role: { userId: existing.userId, role: existing.role } }, data: { verificationStatus: "VERIFIED" } });
