@@ -15,12 +15,12 @@ export async function getVerificationRequest(id: string) {
 }
 
 /** Application-owned verification: admin approval is the authoritative verification event. */
-export async function updateVerificationRequest(id: string, status: "APPROVED" | "REJECTED", reason?: string) {
+export async function updateVerificationRequest(id: string, status: "VERIFIED" | "REJECTED", reason?: string) {
   const existing = await prisma.verificationRequest.findUnique({ where: { id }, include: { documents: true, liveSession: true } });
   if (!existing) throw new Error("VERIFICATION_REQUEST_NOT_FOUND");
   if (existing.status === "VERIFIED") throw new Error("VERIFICATION_ALREADY_DECIDED");
 
-  if (status === "APPROVED") {
+  if (status === "VERIFIED") {
     if (existing.status !== "UNDER_VERIFICATION") throw new Error("INVALID_VERIFICATION_STATE");
     if (existing.documents.length === 0) throw new Error("DOCUMENTS_REQUIRED");
     if (!existing.liveSession || existing.liveSession.status !== "IN_PROGRESS") throw new Error("LIVE_SESSION_REQUIRED");
@@ -29,11 +29,11 @@ export async function updateVerificationRequest(id: string, status: "APPROVED" |
 
   const result = await prisma.$transaction(async (tx) => {
     const now = new Date();
-    if (status === "APPROVED") {
+    if (status === "VERIFIED") {
       await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "VERIFIED" } });
       await tx.verificationLiveSession.update({ where: { verificationRequestId: id }, data: { status: "COMPLETED", completedAt: now } });
       await tx.verificationStep.updateMany({ where: { verificationRequestId: id }, data: { status: "COMPLETED", completedAt: now } });
-      await tx.userRoleAssignment.update({ where: { userId_role: { userId: existing.userId, role: existing.role } }, data: { verificationStatus: "APPROVED" } });
+      await tx.userRoleAssignment.update({ where: { userId_role: { userId: existing.userId, role: existing.role } }, data: { verificationStatus: "VERIFIED" } });
     } else {
       await tx.verificationStep.updateMany({ where: { verificationRequestId: id, step: "REVIEW" }, data: { status: "COMPLETED", completedAt: now } });
       await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "REJECTED" } });
@@ -44,7 +44,7 @@ export async function updateVerificationRequest(id: string, status: "APPROVED" |
     }
     return tx.verificationRequest.update({
       where: { id },
-      data: { status: status === "APPROVED" ? "VERIFIED" : "REJECTED", rejectionReason: status === "REJECTED" ? reason ?? null : null, reviewedAt: now },
+      data: { status: status === "VERIFIED" ? "VERIFIED" : "REJECTED", rejectionReason: status === "REJECTED" ? reason ?? null : null, reviewedAt: now },
       include: { user: { select: { id: true, name: true, username: true, email: true } }, steps: true, documents: true, liveSession: true },
     });
   });
@@ -54,9 +54,9 @@ export async function updateVerificationRequest(id: string, status: "APPROVED" |
       data: {
         userId: existing.userId,
         type: NotificationType.VERIFICATION_UPDATE,
-        title: status === "APPROVED" ? "Verification approved" : "Verification rejected",
-        body: status === "APPROVED" ? "Your provider verification has been approved." : "Your provider verification was rejected: " + (reason ?? "No reason provided") + ".",
-        data: { event: status === "APPROVED" ? "VERIFICATION_APPROVED" : "VERIFICATION_REJECTED", verificationRequestId: id, role: existing.role },
+        title: status === "VERIFIED" ? "Verification approved" : "Verification rejected",
+        body: status === "VERIFIED" ? "Your provider verification has been approved." : "Your provider verification was rejected: " + (reason ?? "No reason provided") + ".",
+        data: { event: status === "VERIFIED" ? "VERIFICATION_APPROVED" : "VERIFICATION_REJECTED", verificationRequestId: id, role: existing.role },
       },
     });
   } catch {
