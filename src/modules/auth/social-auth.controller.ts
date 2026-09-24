@@ -18,6 +18,7 @@ const registerWithPhoneSchema = z.object({
 const googleAuthSchema = z.object({
   idToken: z.string().trim().min(20),
   phone: z.string().trim().min(8).max(20).optional(),
+  phoneIdToken: z.string().trim().min(20).optional(),
 });
 
 function sendError(res: Response, req: Request, status: number, code: string, message: string) {
