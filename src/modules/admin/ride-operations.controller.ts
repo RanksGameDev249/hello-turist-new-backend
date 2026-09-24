@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { listOperationalRides, getOperationalRide, assignOperationalRide, cancelOperationalRide } from "./ride-operations.service";
+import { listOperationalRides, getOperationalRide, assignOperationalRide, cancelOperationalRide, interruptOperationalRide, recoverOperationalRide } from "./ride-operations.service";
 import { writeAuditLog } from "./audit.service";
 
 export async function getOperationalRides(req: Request, res: Response) {
@@ -29,6 +29,36 @@ export async function assignOperationalRideController(req: Request, res: Respons
   } catch (e) {
     const message = e instanceof Error ? e.message : "INTERNAL_SERVER_ERROR";
     const status = ["RIDE_NOT_FOUND", "DRIVER_NOT_VERIFIED", "INVALID_RIDE_STATE"].includes(message) ? 409 : 500;
+    return res.status(status).json({ success: false, error: { code: message, message }, requestId: req.requestId });
+  }
+}
+
+export async function interruptOperationalRideController(req: Request, res: Response) {
+  const rideId = typeof req.params.id === "string" ? req.params.id : "";
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "Admin intervention";
+  if (!reason) return res.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message: "reason is required" }, requestId: req.requestId });
+  try {
+    const data = await interruptOperationalRide(rideId, req.user!.id, reason);
+    return res.json({ success: true, data, error: null, requestId: req.requestId });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "INTERNAL_SERVER_ERROR";
+    const status = ["RIDE_NOT_FOUND"].includes(message) ? 404 : ["RIDE_ACCESS_DENIED","INVALID_RIDE_STATE"].includes(message) ? 409 : 500;
+    return res.status(status).json({ success: false, error: { code: message, message }, requestId: req.requestId });
+  }
+}
+
+export async function recoverOperationalRideController(req: Request, res: Response) {
+  const rideId = typeof req.params.id === "string" ? req.params.id : "";
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "Admin recovery";
+  if (!reason) return res.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message: "reason is required" }, requestId: req.requestId });
+  const driverId = typeof req.body?.driverId === "string" && req.body.driverId.trim() ? req.body.driverId.trim() : undefined;
+  const idempotencyKey = typeof req.body?.idempotencyKey === "string" ? req.body.idempotencyKey.trim() : undefined;
+  try {
+    const data = await recoverOperationalRide(rideId, req.user!.id, reason, driverId, idempotencyKey);
+    return res.json({ success: true, data, error: null, requestId: req.requestId });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "INTERNAL_SERVER_ERROR";
+    const status = ["RIDE_NOT_FOUND"].includes(message) ? 404 : ["RIDE_ACCESS_DENIED","INVALID_RIDE_STATE","DRIVER_NOT_VERIFIED","DRIVER_NOT_AVAILABLE","DRIVER_ALREADY_ASSIGNED","NO_REPLACEMENT_DRIVER_AVAILABLE"].includes(message) ? 409 : 500;
     return res.status(status).json({ success: false, error: { code: message, message }, requestId: req.requestId });
   }
 }
