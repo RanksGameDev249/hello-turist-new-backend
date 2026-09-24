@@ -40,6 +40,8 @@ model User {
   name              String
   username          String     @unique
   email             String?    @unique
+  phone             String?    @unique
+  firebaseUid       String?    @unique @map("firebase_uid")
   passwordHash      String     @map("password_hash")
   status            UserStatus @default(ACTIVE)
   preferredLanguage String     @default("en") @map("preferred_language")
