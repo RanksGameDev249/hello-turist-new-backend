@@ -1,5 +1,6 @@
 import { prisma } from "../../core/prisma";
 import { NotificationType } from "../../generated/prisma/client";
+import { createNotification } from "../notification/notification.service";
 
 export async function listVerificationRequests(input: { page: number; limit: number; status?: string; role?: "DRIVER" | "GUIDE" }) {
   const where = { ...(input.status ? { status: input.status as any } : {}), ...(input.role ? { role: input.role } : {}) };
@@ -50,14 +51,11 @@ export async function updateVerificationRequest(id: string, status: "VERIFIED" |
   });
 
   try {
-    await prisma.notification.create({
-      data: {
-        userId: existing.userId,
-        type: NotificationType.VERIFICATION_UPDATE,
-        title: status === "VERIFIED" ? "Verification approved" : "Verification rejected",
-        body: status === "VERIFIED" ? "Your provider verification has been approved." : "Your provider verification was rejected: " + (reason ?? "No reason provided") + ".",
-        data: { event: status === "VERIFIED" ? "VERIFICATION_APPROVED" : "VERIFICATION_REJECTED", verificationRequestId: id, role: existing.role },
-      },
+    await createNotification(existing.userId, {
+      type: NotificationType.VERIFICATION_UPDATE,
+      title: status === "VERIFIED" ? "Verification approved" : "Verification rejected",
+      body: status === "VERIFIED" ? "Your provider verification has been approved." : "Your provider verification was rejected: " + (reason ?? "No reason provided") + ".",
+      data: { event: status === "VERIFIED" ? "VERIFICATION_APPROVED" : "VERIFICATION_REJECTED", verificationRequestId: id, role: existing.role },
     });
   } catch {
     // Notification delivery must not roll back an already completed verification decision.
