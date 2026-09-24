@@ -28,9 +28,9 @@ export function createPrivateMediaUploadUrl(input: { userId: string; contentType
   const timestamp = Math.floor(Date.now() / 1000);
   const type = input.purpose.startsWith("profile_avatar") ? ("upload" as const) : ("authenticated" as const);
   const resource_type = resourceType(media.contentType);
-  // Cloudinary upload signatures must only include parameters that Cloudinary signs.\n  // resource_type is selected by the upload URL and is not part of the signature.\n  const signed = signCloudinaryUpload({ public_id: media.publicId, type, timestamp });
-
-  return {
+  // Cloudinary upload signatures must only include parameters that Cloudinary signs.
+  // resource_type is selected by the upload URL and is not part of the signature.
+  const signed = signCloudinaryUpload({ public_id: media.publicId, type, timestamp });
     ...media,
     uploadUrl: `https://api.cloudinary.com/v1_1/${signed.cloudName}/${resource_type}/upload`,
     uploadParams: {
