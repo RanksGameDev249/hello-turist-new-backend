@@ -45,6 +45,7 @@ export async function listAdminUsers(params: { page: number; limit: number; stat
       COALESCE(json_agg(json_build_object('role', r.role, 'verificationStatus', r.verification_status)) FILTER (WHERE r.id IS NOT NULL), '[]') AS roles
     FROM "users" u LEFT JOIN "user_roles" r ON r.user_id = u.id
     WHERE (${params.status ?? null}::text IS NULL OR u.status::text = ${params.status ?? null})
+      AND EXISTS (SELECT 1 FROM "user_roles" ar WHERE ar.user_id = u.id AND ar.role = 'ADMIN')
     GROUP BY u.id ORDER BY u.created_at DESC LIMIT ${params.limit} OFFSET ${offset}
   `);
   const countRows = await prisma.$queryRaw<any[]>(Prisma.sql`
