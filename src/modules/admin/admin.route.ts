@@ -54,8 +54,7 @@ router.post("/emergency/incidents/:id/responders", ...admin, requirePermission("
 router.patch("/emergency/responders/:assignmentId", ...admin, requirePermission("emergency.manage"), responderStatusAdmin);
 router.get("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.read"), listAdminPermissions);
 router.put("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.manage"), updateAdminPermissions);
-export default router;
-
 router.get("/support/tickets", ...admin, requirePermission("support.read"), listAdminSupportTicketsController);
 router.post("/support/tickets/:id/reply", ...admin, requirePermission("support.manage"), replyAdminSupportTicketController);
 router.patch("/support/tickets/:id/status", ...admin, requirePermission("support.manage"), updateAdminSupportTicketController);
+export default router;
