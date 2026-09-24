@@ -9,6 +9,7 @@ import { getBrandingController, updateBrandingController } from "./branding.cont
 import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController, interruptOperationalRideController, recoverOperationalRideController } from "./ride-operations.controller";
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
 import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
+import { listAdminPaymentsController, refundAdminPaymentController } from "./finance.controller";
 import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller";
 import { getAdminAnalytics } from "./analytics.controller";
 import { getFinanceSummary } from "./finance.controller";
@@ -18,6 +19,8 @@ const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
 router.get("/analytics", ...admin, requirePermission("analytics.read"), getAdminAnalytics);
 router.get("/finance/summary", ...admin, requirePermission("payments.read"), getFinanceSummary);
+router.get("/finance/payments", ...admin, requirePermission("payments.read"), listAdminPaymentsController);
+router.post("/finance/payments/:id/refund", ...admin, requirePermission("payments.refund"), refundAdminPaymentController);
 router.get("/notifications", ...admin, requirePermission("notifications.read"), listAdminNotifications);
 router.post("/notifications", ...admin, requirePermission("notifications.manage"), sendAdminNotification);
 router.get("/verification/requests", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequests);
