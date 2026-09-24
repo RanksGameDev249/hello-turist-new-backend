@@ -91,6 +91,7 @@ export async function resubmitVerification(userId: string, requestId: string) {
     await tx.verificationRequest.update({ where: { id: request.id }, data: { status: "RESUBMITTED", rejectionReason: null, submittedAt: new Date(), reviewedAt: null } });
     await tx.verificationStep.updateMany({ where: { verificationRequestId: request.id }, data: { status: "PENDING", completedAt: null } });
     await tx.verificationDocument.updateMany({ where: { verificationRequestId: request.id }, data: { verificationStatus: "PENDING" } });
+    await tx.userRoleAssignment.update({ where: { userId_role: { userId, role: request.role } }, data: { verificationStatus: "RESUBMITTED" } });
     return tx.verificationRequest.findUniqueOrThrow({ where: { id: request.id }, include: { steps: { orderBy: { createdAt: "asc" } }, documents: { select: { id: true, documentType: true, checksum: true, expiryDate: true, verificationStatus: true, createdAt: true, updatedAt: true }, orderBy: { createdAt: "asc" } }, liveSession: true } });
   });
   await sendVerificationNotification(userId, "Verification resubmitted", "Your verification request has been resubmitted for review.", { event: "VERIFICATION_RESUBMITTED", verificationRequestId: requestId, role: request.role });
