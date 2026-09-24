@@ -24,7 +24,7 @@ function handleError(res: Response, requestId: string, error: unknown) {
   return errorResponse(res, requestId, status, code, message);
 }
 
-async function transition(req: Request, res: Response, type: "DRIVER_ARRIVING" | "RIDE_STARTED" | "RIDE_COMPLETED") {
+async function transition(req: Request, res: Response, type: "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "RIDE_STARTED" | "NEAR_DESTINATION" | "RIDE_COMPLETED") {
   try {
     const payload = req.body && typeof req.body === "object" ? req.body : undefined;
     return successResponse(res, req.requestId, await service.addRideEvent(req.user!.id, rideId(req), { type, payload }));
@@ -37,8 +37,16 @@ export function driverArrivingController(req: Request, res: Response) {
   return transition(req, res, "DRIVER_ARRIVING");
 }
 
+export function driverArrivedController(req: Request, res: Response) {
+  return transition(req, res, "DRIVER_ARRIVED");
+}
+
 export function startRideController(req: Request, res: Response) {
   return transition(req, res, "RIDE_STARTED");
+}
+
+export function nearDestinationController(req: Request, res: Response) {
+  return transition(req, res, "NEAR_DESTINATION");
 }
 
 export function completeRideController(req: Request, res: Response) {
