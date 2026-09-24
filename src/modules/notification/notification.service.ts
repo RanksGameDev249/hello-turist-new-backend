@@ -47,6 +47,7 @@ async function pushToUser(userId: string, title: string, body: string, data?: Pr
   await Promise.all(devices.map(async ({ fcm_token }) => {
     const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ message: { token: fcm_token, notification: { title, body }, data: data && typeof data === "object" ? Object.fromEntries(Object.entries(data as Record<string, unknown>).map(([k,v]) => [k, String(v)])) : undefined, android: { priority: "high" } } }) });
     if (response.status === 404 || response.status === 400) await prisma.$executeRaw`UPDATE notification_devices SET enabled=false,updated_at=NOW() WHERE fcm_token=${fcm_token}`;
+    if (!response.ok) return;
   }));
 }
 
