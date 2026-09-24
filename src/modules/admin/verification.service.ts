@@ -1,8 +1,8 @@
 import { prisma } from "../../core/prisma";
 import { NotificationType } from "../../generated/prisma/client";
 
-export async function listVerificationRequests(input: { page: number; limit: number; status?: string }) {
-  const where = input.status ? { status: input.status as any } : {};
+export async function listVerificationRequests(input: { page: number; limit: number; status?: string; role?: "DRIVER" | "GUIDE" }) {
+  const where = { ...(input.status ? { status: input.status as any } : {}), ...(input.role ? { role: input.role } : {}) };
   const [items, total] = await Promise.all([
     prisma.verificationRequest.findMany({ where, include: { user: { select: { id: true, name: true, username: true, email: true } }, steps: true, documents: true, liveSession: true }, orderBy: { createdAt: "desc" }, skip: (input.page - 1) * input.limit, take: input.limit }),
     prisma.verificationRequest.count({ where }),
