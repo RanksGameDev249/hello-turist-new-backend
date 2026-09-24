@@ -40,8 +40,12 @@ export function redisRateLimit(options: RateLimitOptions) {
       return next();
     } catch (error) {
       console.error("RATE_LIMIT_REDIS_ERROR:", error);
-      // Fail open if Redis is temporarily unavailable so the API remains usable.
-      return next();
+      return res.status(503).json({
+        success: false,
+        data: null,
+        error: { code: "RATE_LIMIT_UNAVAILABLE", message: "Security controls are temporarily unavailable. Please retry shortly." },
+        requestId: req.requestId,
+      });
     }
   };
 }
