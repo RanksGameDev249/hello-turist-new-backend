@@ -35,6 +35,11 @@ export async function updateVerificationRequest(id: string, status: "APPROVED" |
       await tx.userRoleAssignment.update({ where: { userId_role: { userId: existing.userId, role: existing.role } }, data: { verificationStatus: "APPROVED" } });
     } else {
       await tx.verificationStep.updateMany({ where: { verificationRequestId: id, step: "REVIEW" }, data: { status: "COMPLETED", completedAt: now } });
+      await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "REJECTED" } });
+      if (existing.liveSession) {
+        await tx.verificationLiveSession.update({ where: { verificationRequestId: id }, data: { status: "FAILED" } });
+      }
+      await tx.userRoleAssignment.update({ where: { userId_role: { userId: existing.userId, role: existing.role } }, data: { verificationStatus: "REJECTED" } });
     }
     return tx.verificationRequest.update({
       where: { id },
