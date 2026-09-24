@@ -6,7 +6,6 @@ import { updateUserRoleVerification, decideVerification } from "./admin.controll
 import { getVerificationRequestById, getVerificationRequests } from "./verification.controller";
 import { getPeople, getPersonById } from "./people.controller";
 import { getBrandingController, updateBrandingController } from "./branding.controller";
-import { getRemoteScreen, publishRemoteScreen, saveRemoteScreenDraft } from "./remote-ui.controller";
 import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController } from "./ride-operations.controller";
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
 import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
@@ -31,9 +30,6 @@ router.get("/branding", ...admin, requirePermission("branding.read"), getBrandin
 router.patch("/branding", ...admin, requirePermission("branding.manage"), updateBrandingController);
 router.get("/pricing/ride", ...admin, requirePermission("pricing.read"), getRidePricingController);
 router.patch("/pricing/ride", ...admin, requirePermission("pricing.manage"), updateRidePricingController);
-router.get("/remote-ui/:screen", ...admin, requirePermission("remote_ui.read"), getRemoteScreen);
-router.put("/remote-ui/:screen/draft", ...admin, requirePermission("remote_ui.manage"), saveRemoteScreenDraft);
-router.post("/remote-ui/:screen/publish", ...admin, requirePermission("remote_ui.manage"), publishRemoteScreen);
 router.get("/rides", ...admin, requirePermission("rides.read"), getOperationalRides);
 router.get("/rides/:id", ...admin, requirePermission("rides.read"), getOperationalRideById);
 router.post("/rides/:id/assign", ...admin, requirePermission("rides.manage"), assignOperationalRideController);
