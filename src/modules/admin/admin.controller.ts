@@ -48,6 +48,9 @@ export async function decideVerification(req: Request, res: Response) {
       if (error.message === "VERIFICATION_REQUEST_NOT_FOUND") return errorResponse(req, res, 404, error.message, "Verification request not found");
       if (error.message === "INVALID_ROLE") return errorResponse(req, res, 400, error.message, "Only DRIVER or GUIDE requests can be reviewed");
       if (error.message === "INVALID_VERIFICATION_STATE") return errorResponse(req, res, 409, error.message, "Verification request is not awaiting review");
+      if (error.message === "DOCUMENTS_REQUIRED") return errorResponse(req, res, 400, error.message, "At least one verification document is required");
+      if (error.message === "LIVE_SESSION_REQUIRED") return errorResponse(req, res, 400, error.message, "Live verification must be in progress before admin approval");
+      if (error.message === "DOCUMENT_EXPIRED") return errorResponse(req, res, 400, error.message, "One or more verification documents are expired");
     }
     console.error("ADMIN_VERIFICATION_DECISION_ERROR:", error);
     return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
