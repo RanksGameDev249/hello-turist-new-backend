@@ -160,10 +160,13 @@ export async function refreshAccessToken(refreshToken: string) {
   }
 
   if (session.revokedAt) {
-    await prisma.refreshTokenReuse.create({
-      data: {
-        tokenHash,
-      },
+    // A reused refresh token may be presented repeatedly by a client while it
+    // is retrying. The token hash is the primary key, so recording the same
+    // reuse event must be idempotent instead of throwing P2002 on every retry.
+    await prisma.refreshTokenReuse.upsert({
+      where: { tokenHash },
+      update: {},
+      create: { tokenHash },
     });
 
     throw new Error("REFRESH_TOKEN_REVOKED");
