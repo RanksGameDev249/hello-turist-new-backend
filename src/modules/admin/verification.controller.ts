@@ -26,7 +26,8 @@ export async function getVerificationRequests(req: Request, res: Response) {
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
-    const result = await listVerificationRequests({ page, limit, status });
+    const role = req.query.role === "DRIVER" || req.query.role === "GUIDE" ? req.query.role : undefined;
+    const result = await listVerificationRequests({ page, limit, status, role });
     return res.json({ success: true, data: result });
   } catch (error) { return handleVerificationError(res, error); }
 }
