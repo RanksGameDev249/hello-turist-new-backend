@@ -100,7 +100,7 @@ export async function dispatchRide(rideId: string) {
 
   for (const candidate of ranked.slice(0, OFFER_LIMIT)) {
     try {
-      let assignment: Awaited<ReturnType<typeof prisma.rideAssignment.create>> | null = null;
+      let assignment: { id: string } | null = null;
       for (let transactionAttempt = 1; transactionAttempt <= 4 && !assignment; transactionAttempt += 1) {
         try {
           assignment = await prisma.$transaction(async (tx) => {
