@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { getFinanceSummary } from "./finance.controller";
 import { listAdminPayments, adminRefundPayment } from "./finance.service";
 
 function int(v:unknown,d:number,max:number){const n=Number(v);return Number.isInteger(n)&&n>0?Math.min(n,max):d;}
