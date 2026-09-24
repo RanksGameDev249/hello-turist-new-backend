@@ -182,6 +182,7 @@ export async function registerUserWithPhone(input: {
 export async function loginWithGoogle(input: {
   idToken: string;
   phone?: string;
+  phoneIdToken?: string;
 }) {
   if (!input.idToken.trim()) throw new Error("INVALID_FIREBASE_ID_TOKEN");
 
@@ -192,6 +193,16 @@ export async function loginWithGoogle(input: {
     typeof decoded.name === "string" && decoded.name.trim()
       ? decoded.name.trim()
       : email?.split("@")[0] || "Google user";
+
+  const requestedPhone = input.phone?.trim() ? validatePhone(input.phone) : null;
+  if (input.phoneIdToken?.trim()) {
+    const phoneDecoded = await verifyFirebaseIdToken(input.phoneIdToken.trim());
+    const verifiedPhone = typeof phoneDecoded.phone_number === "string"
+      ? validatePhone(phoneDecoded.phone_number)
+      : null;
+    if (!verifiedPhone) throw new Error("FIREBASE_PHONE_NUMBER_MISSING");
+    if (!requestedPhone || verifiedPhone !== requestedPhone) throw new Error("PHONE_MISMATCH");
+  }
 
   const existingByFirebase = await findUserByFirebaseUid(firebaseUid);
   let userId: string | undefined = existingByFirebase?.id;
@@ -217,12 +228,12 @@ export async function loginWithGoogle(input: {
         });
       }
     } else {
-      if (!input.phone?.trim()) throw new Error("GOOGLE_PHONE_REQUIRED");
-      await attachFirebaseIdentity(userId, firebaseUid, validatePhone(input.phone));
+      if (!requestedPhone || !input.phoneIdToken?.trim()) throw new Error("GOOGLE_PHONE_VERIFICATION_REQUIRED");
+      await attachFirebaseIdentity(userId, firebaseUid, requestedPhone);
     }
   } else {
-    if (!input.phone?.trim()) throw new Error("GOOGLE_PHONE_REQUIRED");
-    const phone = validatePhone(input.phone);
+    if (!requestedPhone || !input.phoneIdToken?.trim()) throw new Error("GOOGLE_PHONE_VERIFICATION_REQUIRED");
+    const phone = requestedPhone;
     const existingPhone = await findUserByPhone(phone);
     if (existingPhone) throw new Error("PHONE_ALREADY_EXISTS");
 
