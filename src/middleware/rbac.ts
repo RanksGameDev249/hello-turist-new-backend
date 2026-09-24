@@ -22,8 +22,6 @@ export const ADMIN_PERMISSIONS = [
   "pricing.manage",
   "branding.read",
   "branding.manage",
-  "remote_ui.read",
-  "remote_ui.manage",
   "analytics.read",
   "audit.read",
   "admin.permissions.read",
