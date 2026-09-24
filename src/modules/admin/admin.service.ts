@@ -13,7 +13,7 @@ export async function updateRoleVerification(userId:string,role:"DRIVER"|"GUIDE"
 
 export async function decideVerificationRequest(requestId:string,status:"VERIFIED"|"REJECTED",rejectionReason?:string){
  const request=await prisma.verificationRequest.findUnique({where:{id:requestId},select:{id:true,userId:true,role:true,status:true}});
- if(!request)throw new Error("VERIFICATION_REQUEST_NOT_FOUND"); if(request.role!=="DRIVER"&&request.role!=="GUIDE")throw new Error("INVALID_ROLE"); if(request.status!=="UNDER_VERIFICATION")throw new Error("INVALID_VERIFICATION_STATE");
+ if(!request)throw new Error("VERIFICATION_REQUEST_NOT_FOUND"); if(request.role!=="DRIVER"&&request.role!=="GUIDE")throw new Error("INVALID_ROLE"); if(!["PENDING","UNDER_VERIFICATION","RESUBMITTED"].includes(request.status))throw new Error("INVALID_VERIFICATION_STATE");
  const updatedRequest=await prisma.$transaction(async tx=>{
   const updated=await tx.verificationRequest.update({where:{id:request.id},data:{status,rejectionReason:status==="REJECTED"?rejectionReason:null,reviewedAt:new Date()},include:{steps:{orderBy:{createdAt:"asc"}},documents:{select:{id:true,documentType:true,checksum:true,expiryDate:true,verificationStatus:true,createdAt:true,updatedAt:true},orderBy:{createdAt:"asc"}},liveSession:true}});
   await tx.verificationStep.updateMany({where:{verificationRequestId:request.id},data:{status:status==="VERIFIED"?"COMPLETED":"FAILED",completedAt:new Date()}});
