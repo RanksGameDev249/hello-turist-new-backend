@@ -26,10 +26,13 @@ import languageRouter from "./modules/language/language.route";
 import discoveryRouter from "./modules/discovery/discovery.route";
 import { getBranding } from "./modules/admin/branding.service";
 import { errorHandler } from "./middleware/error-handler";
+import { securityHeaders } from "./middleware/security";
 
 dotenv.config();
 validateProductionIntegrations();
 const app = express();
+app.disable("x-powered-by");
+app.use(securityHeaders);
 
 const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
   .split(",")
