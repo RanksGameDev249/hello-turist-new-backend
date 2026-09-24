@@ -6,7 +6,7 @@ import { updateUserRoleVerification, decideVerification } from "./admin.controll
 import { getVerificationRequestById, getVerificationRequests } from "./verification.controller";
 import { getPeople, getPersonById } from "./people.controller";
 import { getBrandingController, updateBrandingController } from "./branding.controller";
-import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController } from "./ride-operations.controller";
+import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController, interruptOperationalRideController, recoverOperationalRideController } from "./ride-operations.controller";
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
 import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
 import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller";
@@ -34,6 +34,8 @@ router.get("/rides", ...admin, requirePermission("rides.read"), getOperationalRi
 router.get("/rides/:id", ...admin, requirePermission("rides.read"), getOperationalRideById);
 router.post("/rides/:id/assign", ...admin, requirePermission("rides.manage"), assignOperationalRideController);
 router.post("/rides/:id/cancel", ...admin, requirePermission("rides.manage"), cancelOperationalRideController);
+router.post("/rides/:id/interrupt", ...admin, requirePermission("rides.manage"), interruptOperationalRideController);
+router.post("/rides/:id/recover", ...admin, requirePermission("rides.manage"), recoverOperationalRideController);
 router.get("/emergency/incidents", ...admin, requirePermission("emergency.read"), listEmergencyAdmin);
 router.get("/emergency/incidents/:id", ...admin, requirePermission("emergency.read"), getEmergencyAdmin);
 router.post("/emergency/incidents/:id/acknowledge", ...admin, requirePermission("emergency.manage"), acknowledgeEmergencyAdminController);
