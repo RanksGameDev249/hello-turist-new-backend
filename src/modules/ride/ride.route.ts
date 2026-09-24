@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
 import { acceptRideController, addEventController, addLocationController, assignRideController, cancelRideController, createRideController, getRideController, listEventsController, listLocationsController, listRidesController, rejectRideController } from "./ride.controller";
-import { driverArrivingController, startRideController, completeRideController } from "./ride-action.controller";
+import { driverArrivingController, driverArrivedController, startRideController, nearDestinationController, completeRideController } from "./ride-action.controller";
 import { fareQuoteController } from "./fare.controller";
 import { listDriverRidesController } from "./driver-ride.controller";
 import { listAssignmentsController, guideSearchController, acceptAssignmentController, rejectAssignmentController } from "./dispatch.controller";
@@ -14,7 +14,6 @@ router.get("/driver", listDriverRidesController);
 router.post("/fare-quote", fareQuoteController);
 router.post("/", createRideController);
 router.get("/", listRidesController);
-
 router.get("/:id/assignments", listAssignmentsController);
 router.post("/:id/guide-search", guideSearchController);
 router.get("/:id/guide-assignments", listGuideAssignmentsController);
@@ -23,7 +22,6 @@ router.post("/:id/guide-assignments/:assignmentId/accept", acceptGuideAssignment
 router.post("/:id/guide-assignments/:assignmentId/reject", rejectGuideAssignmentController);
 router.post("/:id/assignments/:assignmentId/accept", acceptAssignmentController);
 router.post("/:id/assignments/:assignmentId/reject", rejectAssignmentController);
-
 router.get("/:id", getRideController);
 router.post("/:id/cancel", cancelRideController);
 router.post("/:id/assign", assignRideController);
@@ -32,6 +30,7 @@ router.post("/:id/reject", rejectRideController);
 router.post("/:id/location", addLocationController);
 router.get("/:id/locations", listLocationsController);
 router.post("/:id/arriving", driverArrivingController);
+router.post("/:id/arrived", driverArrivedController);
 router.post("/:id/start", (req, res) => {
   res.once("finish", () => {
     if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -40,6 +39,7 @@ router.post("/:id/start", (req, res) => {
   });
   return startRideController(req, res);
 });
+router.post("/:id/near-destination", nearDestinationController);
 router.post("/:id/complete", completeRideController);
 router.post("/:id/events", (req, res) => {
   const rideId = req.params.id;
