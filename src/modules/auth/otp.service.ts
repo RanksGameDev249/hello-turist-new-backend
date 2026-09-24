@@ -13,17 +13,17 @@ function normalizePhone(value: string) {
 }
 
 async function findUserByPhone(phone: string) {
-  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
-    SELECT id FROM users WHERE phone = ${phone} AND status = 'ACTIVE' LIMIT 1
-  `;
-  return rows[0] ?? null;
+  return prisma.user.findFirst({
+    where: { phone, status: "ACTIVE" },
+    select: { id: true },
+  });
 }
 
 async function findUserByFirebaseUid(firebaseUid: string) {
-  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
-    SELECT id FROM users WHERE firebase_uid = ${firebaseUid} AND status = 'ACTIVE' LIMIT 1
-  `;
-  return rows[0] ?? null;
+  return prisma.user.findFirst({
+    where: { firebaseUid, status: "ACTIVE" },
+    select: { id: true },
+  });
 }
 
 async function issueSession(userId: string) {
@@ -34,6 +34,7 @@ async function issueSession(userId: string) {
       name: true,
       username: true,
       email: true,
+      phone: true,
       status: true,
       preferredLanguage: true,
     },
@@ -41,10 +42,6 @@ async function issueSession(userId: string) {
 
   if (!user) throw new Error("USER_NOT_FOUND");
   if (user.status !== "ACTIVE") throw new Error("ACCOUNT_NOT_ACTIVE");
-
-  const phoneRows = await prisma.$queryRaw<Array<{ phone: string | null }>>`
-    SELECT phone FROM users WHERE id = ${userId}::uuid LIMIT 1
-  `;
 
   const accessToken = jwt.sign(
     { sub: user.id, username: user.username },
@@ -99,11 +96,10 @@ export async function verifyFirebasePhoneToken(idToken: string, inputPhone?: str
       throw new Error("PHONE_ALREADY_EXISTS");
     }
 
-    await prisma.$executeRaw`
-      UPDATE users
-      SET firebase_uid = ${firebaseUid}, phone = ${tokenPhone}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${user.id}::uuid
-    `;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { firebaseUid, phone: tokenPhone },
+    });
   }
 
   return issueSession(user.id);
