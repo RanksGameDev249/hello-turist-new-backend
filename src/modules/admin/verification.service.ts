@@ -1,4 +1,5 @@
 import { prisma } from "../../core/prisma";
+import { NotificationType } from "../../generated/prisma/client";
 
 export async function listVerificationRequests(input: { page: number; limit: number; status?: string }) {
   const where = input.status ? { status: input.status as any } : {};
@@ -26,7 +27,7 @@ export async function updateVerificationRequest(id: string, status: "APPROVED" |
     if (existing.documents.some((document) => document.expiryDate && document.expiryDate <= new Date())) throw new Error("DOCUMENT_EXPIRED");
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const now = new Date();
     if (status === "APPROVED") {
       await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "VERIFIED" } });
@@ -47,4 +48,19 @@ export async function updateVerificationRequest(id: string, status: "APPROVED" |
       include: { user: { select: { id: true, name: true, username: true, email: true } }, steps: true, documents: true, liveSession: true },
     });
   });
+
+  try {
+    await prisma.notification.create({
+      data: {
+        userId: existing.userId,
+        type: NotificationType.VERIFICATION_UPDATE,
+        title: status === "APPROVED" ? "Verification approved" : "Verification rejected",
+        body: status === "APPROVED" ? "Your provider verification has been approved." : "Your provider verification was rejected: " + (reason ?? "No reason provided") + ".",
+        data: { event: status === "APPROVED" ? "VERIFICATION_APPROVED" : "VERIFICATION_REJECTED", verificationRequestId: id, role: existing.role },
+      },
+    });
+  } catch {
+    // Notification delivery must not roll back an already completed verification decision.
+  }
+  return result;
 }
