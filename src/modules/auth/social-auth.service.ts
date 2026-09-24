@@ -120,6 +120,7 @@ async function getUserForSession(userId: string) {
       email: true,
       status: true,
       preferredLanguage: true,
+      phone: true,
     },
   });
 
@@ -210,11 +211,10 @@ export async function loginWithGoogle(input: {
 
     if (existingUser.phone) {
       if (existingByFirebase?.id !== userId) {
-        await prisma.$executeRaw`
-          UPDATE users
-          SET firebase_uid = ${firebaseUid}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${userId}::uuid
-        `;
+        await prisma.user.update({
+          where: { id: userId },
+          data: { firebaseUid },
+        });
       }
     } else {
       if (!input.phone?.trim()) throw new Error("GOOGLE_PHONE_REQUIRED");
