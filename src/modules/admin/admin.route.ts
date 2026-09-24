@@ -6,6 +6,7 @@ import { updateUserRoleVerification, decideVerification } from "./admin.controll
 import { getVerificationRequestById, getVerificationRequests } from "./verification.controller";
 import { getPeople, getPersonById } from "./people.controller";
 import { getBrandingController, updateBrandingController } from "./branding.controller";
+import { getAdminHomeBannerController, updateHomeBannerController } from "../home-content/home-content.controller";
 import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController, interruptOperationalRideController, recoverOperationalRideController } from "./ride-operations.controller";
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
 import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
@@ -37,6 +38,8 @@ router.patch("/users/:userId/roles/:role", ...admin, requirePermission("drivers.
 router.patch("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), decideVerification);
 router.get("/branding", ...admin, requirePermission("branding.read"), getBrandingController);
 router.patch("/branding", ...admin, requirePermission("branding.manage"), updateBrandingController);
+router.get("/home-banner", ...admin, requirePermission("branding.read"), getAdminHomeBannerController);
+router.patch("/home-banner", ...admin, requirePermission("branding.manage"), updateHomeBannerController);
 router.get("/pricing/ride", ...admin, requirePermission("pricing.read"), getRidePricingController);
 router.patch("/pricing/ride", ...admin, requirePermission("pricing.manage"), updateRidePricingController);
 router.get("/rides", ...admin, requirePermission("rides.read"), getOperationalRides);
