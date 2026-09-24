@@ -21,7 +21,7 @@ export async function updateVerificationRequest(id: string, status: "APPROVED" |
   if (existing.status === "VERIFIED") throw new Error("VERIFICATION_ALREADY_DECIDED");
 
   if (status === "APPROVED") {
-    if (!["PENDING", "UNDER_VERIFICATION", "RESUBMITTED"].includes(existing.status)) throw new Error("INVALID_VERIFICATION_STATE");
+    if (existing.status !== "UNDER_VERIFICATION") throw new Error("INVALID_VERIFICATION_STATE");
     if (existing.documents.length === 0) throw new Error("DOCUMENTS_REQUIRED");
     if (!existing.liveSession || existing.liveSession.status !== "IN_PROGRESS") throw new Error("LIVE_SESSION_REQUIRED");
     if (existing.documents.some((document) => document.expiryDate && document.expiryDate <= new Date())) throw new Error("DOCUMENT_EXPIRED");
