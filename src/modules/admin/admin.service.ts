@@ -1,7 +1,8 @@
 import { prisma } from "../../core/prisma";
 import { NotificationType } from "../../generated/prisma/client";
+import { createNotification } from "../notification/notification.service";
 
-async function sendVerificationDecisionNotification(userId:string,title:string,body:string,data:Record<string,string>){try{await prisma.notification.create({data:{userId,type:NotificationType.VERIFICATION_UPDATE,title,body,data}})}catch{}}
+async function sendVerificationDecisionNotification(userId:string,title:string,body:string,data:Record<string,string>){try{await createNotification(userId,{type:NotificationType.VERIFICATION_UPDATE,title,body,data})}catch{}}
 
 export async function updateRoleVerification(userId:string,role:"DRIVER"|"GUIDE",verificationStatus:"APPROVED"|"REJECTED"|"SUSPENDED"|"BLOCKED"){
  const user=await prisma.user.findUnique({where:{id:userId},select:{id:true,username:true,roles:{where:{role},select:{role:true,verificationStatus:true}}}});
