@@ -30,7 +30,7 @@ export async function updateVerificationRequest(id: string, status: "VERIFIED" |
   const result = await prisma.$transaction(async (tx) => {
     const now = new Date();
     if (status === "VERIFIED") {
-      await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "APPROVED" } });
+      await tx.verificationDocument.updateMany({ where: { verificationRequestId: id }, data: { verificationStatus: "VERIFIED" } });
       await tx.verificationLiveSession.update({ where: { verificationRequestId: id }, data: { status: "COMPLETED", completedAt: now } });
       await tx.verificationStep.updateMany({ where: { verificationRequestId: id }, data: { status: "COMPLETED", completedAt: now } });
       await tx.userRoleAssignment.update({ where: { userId_role: { userId: existing.userId, role: existing.role } }, data: { verificationStatus: "VERIFIED" } });
