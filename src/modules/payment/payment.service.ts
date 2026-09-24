@@ -11,10 +11,21 @@ async function sendPaymentNotification(userId: string, title: string, body: stri
 }
 
 function razorpayConfig() {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
   if (!keyId || !keySecret) throw new Error("RAZORPAY_NOT_CONFIGURED");
   return { keyId, keySecret };
+}
+
+export class RazorpayRequestError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly providerCode: string,
+    public readonly providerDescription: string,
+  ) {
+    super("RAZORPAY_REQUEST_FAILED");
+    this.name = "RazorpayRequestError";
+  }
 }
 
 async function razorpayRequest(path: string, init: RequestInit = {}) {
@@ -23,7 +34,14 @@ async function razorpayRequest(path: string, init: RequestInit = {}) {
   const text = await response.text();
   let data: any = {};
   try { data = JSON.parse(text); } catch { /* handled below */ }
-  if (!response.ok) throw new Error("RAZORPAY_REQUEST_FAILED");
+  if (!response.ok) {
+    const providerError = data?.error ?? {};
+    throw new RazorpayRequestError(
+      response.status,
+      String(providerError.code ?? `HTTP_${response.status}`),
+      String(providerError.description ?? providerError.reason ?? `Razorpay request failed with HTTP ${response.status}`),
+    );
+  }
   return data;
 }
 
