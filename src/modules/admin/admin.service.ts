@@ -32,7 +32,7 @@ export async function decideVerificationRequest(requestId:string,status:"VERIFIE
    await tx.verificationLiveSession.update({where:{verificationRequestId:request.id},data:{status:"FAILED"}});
   }
   await tx.verificationStep.updateMany({where:{verificationRequestId:request.id},data:{status:status==="VERIFIED"?"COMPLETED":"FAILED",completedAt:now}});
-  await tx.userRoleAssignment.update({where:{userId_role:{userId:request.userId,role:request.role}},data:{verificationStatus:status==="VERIFIED"?"APPROVED":"REJECTED"}});
+  await tx.userRoleAssignment.update({where:{userId_role:{userId:request.userId,role:request.role}},data:{verificationStatus:status==="VERIFIED"?"VERIFIED":"REJECTED"}});
   return tx.verificationRequest.update({
    where:{id:request.id},
    data:{status,rejectionReason:status==="REJECTED"?rejectionReason:null,reviewedAt:now},
