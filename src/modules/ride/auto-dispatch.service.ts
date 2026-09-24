@@ -100,35 +100,45 @@ export async function dispatchRide(rideId: string) {
 
   for (const candidate of ranked.slice(0, OFFER_LIMIT)) {
     try {
-      const assignment = await prisma.$transaction(async (tx) => {
-        const currentRide = await tx.ride.findUnique({ where: { id: rideId }, select: { status: true } });
-        if (!currentRide || !["REQUESTED", "SEARCHING"].includes(currentRide.status)) return null;
+      let assignment: Awaited<ReturnType<typeof prisma.rideAssignment.create>> | null = null;
+      for (let transactionAttempt = 1; transactionAttempt <= 4 && !assignment; transactionAttempt += 1) {
+        try {
+          assignment = await prisma.$transaction(async (tx) => {
+            const currentRide = await tx.ride.findUnique({ where: { id: rideId }, select: { status: true } });
+            if (!currentRide || !["REQUESTED", "SEARCHING"].includes(currentRide.status)) return null;
 
-        const active = await tx.rideAssignment.findFirst({
-          where: { driverId: candidate.driver.userId, status: { in: ["OFFERED", "ACCEPTED"] } },
-          select: { id: true },
-        });
-        if (active) return null;
+            const active = await tx.rideAssignment.findFirst({
+              where: { driverId: candidate.driver.userId, status: { in: ["OFFERED", "ACCEPTED"] } },
+              select: { id: true },
+            });
+            if (active) return null;
 
-        const created = await tx.rideAssignment.create({
-          data: { rideId, driverId: candidate.driver.userId, status: "OFFERED" },
-        });
-        await tx.ride.update({ where: { id: rideId }, data: { status: "ASSIGNED" } });
-        await tx.rideEvent.create({
-          data: {
-            rideId,
-            type: "DRIVER_ASSIGNED",
-            payload: {
-              driverId: candidate.driver.userId,
-              assignmentId: created.id,
-              dispatch: "AUTOMATIC",
-              distanceKm: candidate.distanceKm,
-              score: Number(candidate.score.toFixed(4)),
-            },
-          },
-        });
-        return created;
-      }, { isolationLevel: "Serializable" });
+            const created = await tx.rideAssignment.create({
+              data: { rideId, driverId: candidate.driver.userId, status: "OFFERED" },
+            });
+            await tx.ride.update({ where: { id: rideId }, data: { status: "ASSIGNED" } });
+            await tx.rideEvent.create({
+              data: {
+                rideId,
+                type: "DRIVER_ASSIGNED",
+                payload: {
+                  driverId: candidate.driver.userId,
+                  assignmentId: created.id,
+                  dispatch: "AUTOMATIC",
+                  distanceKm: candidate.distanceKm,
+                  score: Number(candidate.score.toFixed(4)),
+                },
+              },
+            });
+            return created;
+          }, { isolationLevel: "Serializable", maxWait: 5_000, timeout: 10_000 });
+        } catch (error) {
+          const code = error instanceof Error && "code" in error ? String((error as { code?: unknown }).code) : "";
+          if (code !== "P2034" || transactionAttempt === 4) throw error;
+          const delay = 100 * 2 ** (transactionAttempt - 1);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
 
       if (assignment) {
         void notifyUser(candidate.driver.userId, "New ride offer", "You have a new ride offer. Please accept or reject it before it expires.", {
