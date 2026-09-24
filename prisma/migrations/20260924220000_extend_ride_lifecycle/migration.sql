@@ -1,0 +1,5 @@
+-- Extend the persisted ride lifecycle without rewriting existing data.
+ALTER TYPE "RideStatus" ADD VALUE IF NOT EXISTS 'DRIVER_ARRIVED';
+ALTER TYPE "RideStatus" ADD VALUE IF NOT EXISTS 'NEAR_DESTINATION';
+ALTER TYPE "RideEventType" ADD VALUE IF NOT EXISTS 'DRIVER_ARRIVED';
+ALTER TYPE "RideEventType" ADD VALUE IF NOT EXISTS 'NEAR_DESTINATION';
