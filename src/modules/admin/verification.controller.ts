@@ -2,23 +2,50 @@ import type { Request, Response } from "express";
 import { listVerificationRequests, getVerificationRequest, updateVerificationRequest } from "./verification.service";
 
 const id=(req:Request)=>{const value=req.params.id;if(typeof value!=="string")throw new Error("INVALID_ID");return value;};
+
+function errorResponse(res: Response, status: number, code: string, message: string) {
+  return res.status(status).json({ success: false, message, error: { code, message } });
+}
+
+function handleVerificationError(res: Response, error: unknown) {
+  const code = error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
+  const map: Record<string, [number, string]> = {
+    VERIFICATION_REQUEST_NOT_FOUND: [404, "Verification request not found"],
+    VERIFICATION_ALREADY_DECIDED: [409, "Verification request has already been decided"],
+    INVALID_VERIFICATION_STATE: [409, "Verification request is not awaiting review"],
+    DOCUMENTS_REQUIRED: [400, "At least one verification document is required"],
+    LIVE_SESSION_REQUIRED: [400, "Live verification must be in progress before approval"],
+    DOCUMENT_EXPIRED: [400, "One or more verification documents are expired"],
+  };
+  const mapped = map[code];
+  return mapped ? errorResponse(res, mapped[0], code, mapped[1]) : errorResponse(res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
+}
+
 export async function getVerificationRequests(req: Request, res: Response) {
-  const page = Math.max(Number(req.query.page) || 1, 1);
-  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
-  const status = typeof req.query.status === "string" ? req.query.status : undefined;
-  const result = await listVerificationRequests({ page, limit, status });
-  return res.json({ success: true, data: result });
+  try {
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+    const result = await listVerificationRequests({ page, limit, status });
+    return res.json({ success: true, data: result });
+  } catch (error) { return handleVerificationError(res, error); }
 }
+
 export async function getVerificationRequestById(req: Request, res: Response) {
-  const request = await getVerificationRequest(id(req));
-  if (!request) return res.status(404).json({ success: false, message: "Verification request not found" });
-  return res.json({ success: true, data: request });
+  try {
+    const request = await getVerificationRequest(id(req));
+    if (!request) return errorResponse(res, 404, "VERIFICATION_REQUEST_NOT_FOUND", "Verification request not found");
+    return res.json({ success: true, data: request });
+  } catch (error) { return handleVerificationError(res, error); }
 }
+
 export async function decideVerificationRequest(req: Request, res: Response) {
   const status = req.body?.status;
-  if (status !== "APPROVED" && status !== "REJECTED") return res.status(400).json({ success: false, message: "status must be APPROVED or REJECTED" });
+  if (status !== "APPROVED" && status !== "REJECTED") return errorResponse(res, 400, "VALIDATION_ERROR", "status must be APPROVED or REJECTED");
   const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : undefined;
-  if (status === "REJECTED" && !reason) return res.status(400).json({ success: false, message: "reason is required when rejecting" });
-  const request = await updateVerificationRequest(id(req), status, reason);
-  return res.json({ success: true, data: request });
+  if (status === "REJECTED" && !reason) return errorResponse(res, 400, "VALIDATION_ERROR", "reason is required when rejecting");
+  try {
+    const request = await updateVerificationRequest(id(req), status, reason);
+    return res.json({ success: true, data: request });
+  } catch (error) { return handleVerificationError(res, error); }
 }
