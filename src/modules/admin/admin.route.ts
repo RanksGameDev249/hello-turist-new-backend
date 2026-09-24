@@ -14,6 +14,7 @@ import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller"
 import { getAdminAnalytics } from "./analytics.controller";
 import { getFinanceSummary } from "./finance.controller";
 import { listAdminNotifications, sendAdminNotification } from "./notification.controller";
+import { listAdminPromotionsController, createAdminPromotionController, updateAdminPromotionController, deactivateAdminPromotionController } from "./promotion.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
@@ -23,6 +24,10 @@ router.get("/finance/payments", ...admin, requirePermission("payments.read"), li
 router.post("/finance/payments/:id/refund", ...admin, requirePermission("payments.refund"), refundAdminPaymentController);
 router.get("/notifications", ...admin, requirePermission("notifications.read"), listAdminNotifications);
 router.post("/notifications", ...admin, requirePermission("notifications.manage"), sendAdminNotification);
+router.get("/promotions", ...admin, requirePermission("promotions.read"), listAdminPromotionsController);
+router.post("/promotions", ...admin, requirePermission("promotions.manage"), createAdminPromotionController);
+router.patch("/promotions/:id", ...admin, requirePermission("promotions.manage"), updateAdminPromotionController);
+router.post("/promotions/:id/deactivate", ...admin, requirePermission("promotions.manage"), deactivateAdminPromotionController);
 router.get("/verification/requests", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequests);
 router.get("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), getVerificationRequestById);
 router.get("/people", ...admin, requirePermission("users.read"), getPeople);
