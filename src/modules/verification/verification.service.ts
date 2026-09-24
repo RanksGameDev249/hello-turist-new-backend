@@ -102,12 +102,13 @@ export async function submitVerificationForReview(userId: string, requestId: str
   if (!request) throw new Error("VERIFICATION_REQUEST_NOT_FOUND");
   if (!isEditableStatus(request.status)) throw new Error("VERIFICATION_REQUEST_LOCKED");
   if (request.documents.length === 0) throw new Error("DOCUMENTS_REQUIRED");
-  if (!request.liveSession || request.liveSession.status !== "COMPLETED") throw new Error("LIVE_SESSION_REQUIRED");
+  if (!request.liveSession || request.liveSession.status !== "IN_PROGRESS") throw new Error("LIVE_SESSION_REQUIRED");
   const expired = request.documents.some((document) => document.expiryDate && document.expiryDate <= new Date());
   if (expired) throw new Error("DOCUMENT_EXPIRED");
   const updated = await prisma.$transaction(async (tx) => {
     await tx.verificationRequest.update({ where: { id: request.id }, data: { status: "UNDER_VERIFICATION", submittedAt: new Date() } });
-    await tx.verificationStep.updateMany({ where: { verificationRequestId: request.id }, data: { status: "IN_PROGRESS" } });
+    await tx.verificationStep.updateMany({ where: { verificationRequestId: request.id, step: "REVIEW" }, data: { status: "IN_PROGRESS", completedAt: null } });
+    await tx.verificationStep.updateMany({ where: { verificationRequestId: request.id, step: "PROFILE" }, data: { status: "COMPLETED", completedAt: new Date() } });
     return tx.verificationRequest.findUniqueOrThrow({ where: { id: request.id }, include: { steps: { orderBy: { createdAt: "asc" } }, documents: { select: { id: true, documentType: true, checksum: true, expiryDate: true, verificationStatus: true, createdAt: true, updatedAt: true }, orderBy: { createdAt: "asc" } }, liveSession: true } });
   });
   await sendVerificationNotification(userId, "Verification submitted", "Your verification request has been submitted and is now under review.", { event: "VERIFICATION_SUBMITTED", verificationRequestId: requestId, role: request.role });
