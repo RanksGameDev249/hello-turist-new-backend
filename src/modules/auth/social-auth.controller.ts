@@ -12,6 +12,7 @@ const registerWithPhoneSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(8).max(128),
   phone: z.string().trim().min(8).max(20),
+  idToken: z.string().trim().min(20),
 });
 
 const googleAuthSchema = z.object({
@@ -48,6 +49,9 @@ export async function registerWithPhone(req: Request, res: Response) {
       if (error.message === "USERNAME_ALREADY_EXISTS") return sendError(res, req, 409, error.message, "Username is already registered");
       if (error.message === "EMAIL_ALREADY_EXISTS") return sendError(res, req, 409, error.message, "Email is already registered");
       if (error.message === "INVALID_PHONE_NUMBER") return sendError(res, req, 400, error.message, "Enter a valid mobile number");
+      if (error.message === "INVALID_FIREBASE_ID_TOKEN" || error.message.startsWith("auth/")) return sendError(res, req, 401, "INVALID_FIREBASE_ID_TOKEN", "Phone verification could not be verified");
+      if (error.message === "PHONE_MISMATCH") return sendError(res, req, 401, error.message, "Verified phone number does not match the account phone number");
+      if (error.message === "FIREBASE_PHONE_NUMBER_MISSING") return sendError(res, req, 401, error.message, "A verified phone number is required");
     }
     console.error("REGISTER_WITH_PHONE_ERROR:", error);
     return sendError(res, req, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
