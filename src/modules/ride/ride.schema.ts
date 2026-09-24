@@ -32,12 +32,30 @@ export const locationSchema = z.object({
 });
 
 export const rideEventSchema = z.object({
-  type: z.enum(["DRIVER_ARRIVING", "RIDE_STARTED", "RIDE_COMPLETED", "INTERRUPTED"]),
+  type: z.enum([
+    "DRIVER_ARRIVING",
+    "DRIVER_ARRIVED",
+    "RIDE_STARTED",
+    "NEAR_DESTINATION",
+    "RIDE_COMPLETED",
+    "INTERRUPTED",
+  ]),
   payload: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const rideListQuerySchema = z.object({
-  status: z.enum(["REQUESTED", "SEARCHING", "ASSIGNED", "DRIVER_ARRIVING", "IN_PROGRESS", "INTERRUPTED", "COMPLETED", "CANCELLED"]).optional(),
+  status: z.enum([
+    "REQUESTED",
+    "SEARCHING",
+    "ASSIGNED",
+    "DRIVER_ARRIVING",
+    "DRIVER_ARRIVED",
+    "IN_PROGRESS",
+    "NEAR_DESTINATION",
+    "INTERRUPTED",
+    "COMPLETED",
+    "CANCELLED",
+  ]).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   cursor: z.string().uuid().optional(),
 });
