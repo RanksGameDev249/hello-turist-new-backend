@@ -31,6 +31,8 @@ export function createPrivateMediaUploadUrl(input: { userId: string; contentType
   // Cloudinary upload signatures must only include parameters that Cloudinary signs.
   // resource_type is selected by the upload URL and is not part of the signature.
   const signed = signCloudinaryUpload({ public_id: media.publicId, type, timestamp });
+
+  return {
     ...media,
     uploadUrl: `https://api.cloudinary.com/v1_1/${signed.cloudName}/${resource_type}/upload`,
     uploadParams: {
