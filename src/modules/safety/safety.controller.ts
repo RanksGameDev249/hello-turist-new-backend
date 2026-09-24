@@ -7,6 +7,7 @@ import {
 } from "./safety.service";
 import { createEmergencyIncidentSchema, createSharedTripSchema, createTrustedContactSchema, rideHeartbeatSchema } from "./safety.schema";
 import { rideRecordingConsentSchema } from "../ride-safety/ride-safety.schema";
+import { notifyTrustedContactsForEmergency } from "./trusted-contact-notifier";
 
 function id(req: Request, name: string) { const value = req.params[name]; if (typeof value !== "string") throw new Error("INVALID_ID"); return value; }
 function handleError(res: Response, requestId: string, error: unknown) {
@@ -20,7 +21,7 @@ export async function createTrustedContactController(req:Request,res:Response){c
 export async function acceptTrustedContactInvitationController(req:Request,res:Response){try{return successResponse(res,req.requestId,await acceptTrustedContactInvitation(req.user!.id,id(req,"id")))}catch(e){return handleError(res,req.requestId,e)}}
 export async function deleteTrustedContactController(req:Request,res:Response){try{return successResponse(res,req.requestId,await deleteTrustedContact(req.user!.id,id(req,"id")))}catch(e){return handleError(res,req.requestId,e)}}
 export async function shareTripController(req:Request,res:Response){const p=createSharedTripSchema.safeParse(req.body);if(!p.success)return errorResponse(res,req.requestId,400,"VALIDATION_ERROR","Invalid trip sharing data",p.error.flatten());try{return successResponse(res,req.requestId,await shareTrip(req.user!.id,id(req,"id"),p.data),201)}catch(e){return handleError(res,req.requestId,e)}}
-export async function createEmergencyIncidentController(req:Request,res:Response){const p=createEmergencyIncidentSchema.safeParse(req.body);if(!p.success)return errorResponse(res,req.requestId,400,"VALIDATION_ERROR","Invalid emergency incident data",p.error.flatten());try{return successResponse(res,req.requestId,await createEmergencyIncident(req.user!.id,p.data),201)}catch(e){return handleError(res,req.requestId,e)}}
+export async function createEmergencyIncidentController(req:Request,res:Response){const p=createEmergencyIncidentSchema.safeParse(req.body);if(!p.success)return errorResponse(res,req.requestId,400,"VALIDATION_ERROR","Invalid emergency incident data",p.error.flatten());try{const incident=await createEmergencyIncident(req.user!.id,p.data);await notifyTrustedContactsForEmergency(incident.id);return successResponse(res,req.requestId,incident,201)}catch(e){return handleError(res,req.requestId,e)}}
 export async function getEmergencyIncidentController(req:Request,res:Response){try{return successResponse(res,req.requestId,await getEmergencyIncident(req.user!.id,id(req,"id")))}catch(e){return handleError(res,req.requestId,e)}}
 export async function acknowledgeEmergencyController(req:Request,res:Response){try{return successResponse(res,req.requestId,await acknowledgeEmergency(req.user!.id,id(req,"id")))}catch(e){return handleError(res,req.requestId,e)}}
 export async function escalateEmergencyController(req:Request,res:Response){try{return successResponse(res,req.requestId,await escalateEmergency(req.user!.id,id(req,"id")))}catch(e){return handleError(res,req.requestId,e)}}
