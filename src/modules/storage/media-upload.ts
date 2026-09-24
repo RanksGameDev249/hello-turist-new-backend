@@ -26,7 +26,7 @@ export function preparePrivateMediaUpload(input: { userId: string; contentType: 
 export function createPrivateMediaUploadUrl(input: { userId: string; contentType: string; size: number; purpose: string }) {
   const media = preparePrivateMediaUpload(input);
   const timestamp = Math.floor(Date.now() / 1000);
-  const type = "authenticated" as const;
+  const type = input.purpose.startsWith("profile_avatar") ? ("upload" as const) : ("authenticated" as const);
   const resource_type = resourceType(media.contentType);
   const signed = signCloudinaryUpload({ public_id: media.publicId, resource_type, type, timestamp });
 
