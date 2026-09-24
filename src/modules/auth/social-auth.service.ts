@@ -139,11 +139,26 @@ export async function registerUserWithPhone(input: {
   email?: string;
   password: string;
   phone: string;
+  idToken: string;
 }) {
-  const phone = validatePhone(input.phone);
+  const requestedPhone = validatePhone(input.phone);
+  if (!input.idToken.trim()) throw new Error("INVALID_FIREBASE_ID_TOKEN");
 
-  const existingPhone = await findUserByPhone(phone);
+  const decoded = await verifyFirebaseIdToken(input.idToken.trim());
+  const firebaseUid = decoded.uid;
+  const tokenPhone =
+    typeof decoded.phone_number === "string"
+      ? validatePhone(decoded.phone_number)
+      : null;
+
+  if (!tokenPhone) throw new Error("FIREBASE_PHONE_NUMBER_MISSING");
+  if (tokenPhone !== requestedPhone) throw new Error("PHONE_MISMATCH");
+
+  const existingPhone = await findUserByPhone(requestedPhone);
   if (existingPhone) throw new Error("PHONE_ALREADY_EXISTS");
+
+  const existingFirebase = await findUserByFirebaseUid(firebaseUid);
+  if (existingFirebase) throw new Error("PHONE_ALREADY_EXISTS");
 
   const user = await registerUser({
     name: input.name,
@@ -155,7 +170,9 @@ export async function registerUserWithPhone(input: {
   try {
     await prisma.$executeRaw`
       UPDATE users
-      SET phone = ${phone}, updated_at = CURRENT_TIMESTAMP
+      SET phone = ${requestedPhone},
+          firebase_uid = ${firebaseUid},
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ${user.id}::uuid
     `;
   } catch (error) {
@@ -163,7 +180,7 @@ export async function registerUserWithPhone(input: {
     throw error;
   }
 
-  return { ...user, phone };
+  return { ...user, phone: requestedPhone };
 }
 
 export async function loginWithGoogle(input: {
