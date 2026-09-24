@@ -2,11 +2,25 @@ import crypto from "node:crypto";
 import type { Request, Response } from "express";
 import { errorResponse, successResponse } from "../../core/api-response";
 import { createPaymentSchema, createRazorpayOrderSchema, createRefundSchema, verifyRazorpayPaymentSchema } from "./payment.schema";
-import { applyRazorpayWebhook, createPayment, createRazorpayOrder, createRefund, getPayment, listPayments, verifyRazorpayPayment } from "./payment.service";
+import { applyRazorpayWebhook, createPayment, createRazorpayOrder, createRefund, getPayment, listPayments, RazorpayRequestError, verifyRazorpayPayment } from "./payment.service";
 import { claimRazorpayWebhook, markRazorpayWebhookProcessed, releaseRazorpayWebhook } from "./payment-webhook-dedup";
 
 function getPaymentId(req: Request): string { const { id } = req.params; if (typeof id !== "string") throw new Error("INVALID_PAYMENT_ID"); return id; }
 function handleError(res: Response, requestId: string, error: unknown) {
+  if (error instanceof RazorpayRequestError) {
+    const message =
+      error.status === 401
+        ? "Razorpay authentication failed. Check RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET."
+        : error.status === 403
+          ? "Razorpay rejected this request. Check the Razorpay account/API permissions."
+          : error.status === 400
+            ? `Razorpay rejected the request: ${error.providerDescription}`
+            : "Razorpay request failed. Please try again.";
+    return errorResponse(res, requestId, error.status === 400 ? 400 : 502, "RAZORPAY_REQUEST_FAILED", message, {
+      providerCode: error.providerCode,
+      providerStatus: error.status,
+    });
+  }
   const code = error instanceof Error ? error.message : "INTERNAL_ERROR";
   const map: Record<string, [number, string]> = { RIDE_NOT_FOUND:[404,"Ride not found"], FORBIDDEN:[403,"You do not have access to this payment"], RIDE_CANCELLED:[409,"Ride is cancelled"], PAYMENT_ALREADY_EXISTS:[409,"Payment already exists for this ride"], PAYMENT_NOT_FOUND:[404,"Payment not found"], PAYMENT_NOT_REFUNDABLE:[409,"Payment is not refundable"], INVALID_REFUND_AMOUNT:[400,"Invalid refund amount"], REFUND_PROVIDER_UNSUPPORTED:[409,"This payment provider does not support server-side refunds"], REFUND_ALREADY_PROCESSING:[409,"A refund is already being processed for this payment"], PAYMENT_PROVIDER_ID_MISSING:[409,"The provider payment id is missing; this payment cannot be refunded"], REFUND_NOT_FOUND:[404,"Refund not found"], INVALID_PAYMENT_ID:[400,"Invalid payment id"], PAYMENT_AMOUNT_MISMATCH:[409,"Payment amount does not match the current server fare"], RIDE_PRICING_CONFIG_MISSING:[503,"Ride pricing is not configured"], RAZORPAY_NOT_CONFIGURED:[503,"Razorpay is not configured on the server"], RAZORPAY_CURRENCY_UNSUPPORTED:[409,"Razorpay currently supports only INR checkout"], RAZORPAY_ORDER_INVALID:[502,"Razorpay returned an invalid order"], RAZORPAY_REQUEST_FAILED:[502,"Razorpay request failed"], RAZORPAY_REFUND_FAILED:[502,"Razorpay refund failed"], PAYMENT_ORDER_MISMATCH:[409,"Razorpay order does not match this ride"], RAZORPAY_SIGNATURE_INVALID:[401,"Razorpay payment signature is invalid"], PAYMENT_NOT_SUCCESSFUL:[409,"Razorpay payment is not successful"], INVALID_RAZORPAY_REFUND_WEBHOOK:[400,"Invalid Razorpay refund webhook"], INVALID_RAZORPAY_PAYMENT_WEBHOOK:[400,"Invalid Razorpay payment webhook"] };
   const [status, message] = map[code] ?? [500,"Internal server error"];
