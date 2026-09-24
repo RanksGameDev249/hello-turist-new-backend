@@ -76,9 +76,11 @@ export async function googleAuth(req: Request, res: Response) {
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "INVALID_PHONE_NUMBER") return sendError(res, req, 400, error.message, "Enter a valid mobile number");
-      if (error.message === "GOOGLE_PHONE_REQUIRED") return sendError(res, req, 400, error.message, "Mobile number is required to create your account with Google");
+      if (error.message === "GOOGLE_PHONE_REQUIRED" || error.message === "GOOGLE_PHONE_VERIFICATION_REQUIRED") return sendError(res, req, 400, error.message, "Verify your mobile number before creating your Google account");
       if (error.message === "PHONE_ALREADY_EXISTS") return sendError(res, req, 409, error.message, "Phone number is already registered to another account");
       if (error.message === "GOOGLE_ACCOUNT_ALREADY_LINKED") return sendError(res, req, 409, error.message, "Google account is already linked to another account");
+      if (error.message === "PHONE_MISMATCH") return sendError(res, req, 401, error.message, "Verified phone number does not match the account phone number");
+      if (error.message === "FIREBASE_PHONE_NUMBER_MISSING") return sendError(res, req, 401, error.message, "A verified phone number is required");
       if (error.message === "ACCOUNT_NOT_ACTIVE") return sendError(res, req, 403, error.message, "Account is not active");
       if (error.message === "FIREBASE_ADMIN_NOT_CONFIGURED") return sendError(res, req, 503, "FIREBASE_NOT_CONFIGURED", "Google sign-in is not configured on the server");
       if (error.message.startsWith("auth/")) return sendError(res, req, 401, "INVALID_FIREBASE_ID_TOKEN", "Google sign-in could not be verified");
