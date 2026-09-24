@@ -28,7 +28,9 @@ const nonNegativeNumber = z.preprocess((value) => {
   return value;
 }, z.number().finite().nonnegative().optional());
 
-export const createCuratedPlaceSchema = z.object({
+// Keep the base object free of refinements so Zod can safely call .partial()
+// for PATCH/update requests.
+const curatedPlaceBaseSchema = z.object({
   type: curatedPlaceTypeSchema,
   name: z.string().trim().min(2).max(200),
   description: optionalTrimmedString(3000),
@@ -45,16 +47,32 @@ export const createCuratedPlaceSchema = z.object({
   sponsorName: optionalTrimmedString(200),
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
-}).superRefine((value, ctx) => {
-  if (value.type === "HISTORICAL_PLACE" && !value.history) {
-    ctx.addIssue({ code: "custom", path: ["history"], message: "Historical information is required for historical places" });
-  }
-  if (value.type === "SPONSOR" && !value.sponsorName) {
-    ctx.addIssue({ code: "custom", path: ["sponsorName"], message: "Sponsor name is required for sponsors" });
-  }
 });
 
-export const updateCuratedPlaceSchema = createCuratedPlaceSchema.partial();
+const validateCuratedPlaceRules = <T extends z.ZodType>(schema: T) =>
+  schema.superRefine((value: z.infer<T>, ctx) => {
+    if (value.type === "HISTORICAL_PLACE" && !value.history) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["history"],
+        message: "Historical information is required for historical places",
+      });
+    }
+    if (value.type === "SPONSOR" && !value.sponsorName) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sponsorName"],
+        message: "Sponsor name is required for sponsors",
+      });
+    }
+  });
+
+export const createCuratedPlaceSchema = validateCuratedPlaceRules(curatedPlaceBaseSchema);
+
+// IMPORTANT: partial() must be called on the unrefined object schema in Zod 4.
+// The business rules are applied after partial() so PATCH requests can start
+// from a valid partial object without throwing at module initialization.
+export const updateCuratedPlaceSchema = validateCuratedPlaceRules(curatedPlaceBaseSchema.partial());
 
 export const publicDiscoveryQuerySchema = z.object({
   type: curatedPlaceTypeSchema.optional(),
