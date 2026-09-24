@@ -64,7 +64,6 @@ async function issueSession(userId: string) {
     refreshToken,
     user: {
       ...user,
-      phone: phoneRows[0]?.phone ?? null,
     },
   };
 }
