@@ -15,6 +15,7 @@ import { getAdminAnalytics } from "./analytics.controller";
 import { getFinanceSummary } from "./finance.controller";
 import { listAdminNotifications, sendAdminNotification } from "./notification.controller";
 import { listAdminPromotionsController, createAdminPromotionController, updateAdminPromotionController, deactivateAdminPromotionController } from "./promotion.controller";
+import { listAdminSupportTicketsController, replyAdminSupportTicketController, updateAdminSupportTicketController } from "./support-admin.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
@@ -54,3 +55,7 @@ router.patch("/emergency/responders/:assignmentId", ...admin, requirePermission(
 router.get("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.read"), listAdminPermissions);
 router.put("/rbac/users/:userId/permissions", ...admin, requirePermission("admin.permissions.manage"), updateAdminPermissions);
 export default router;
+
+router.get("/support/tickets", ...admin, requirePermission("support.read"), listAdminSupportTicketsController);
+router.post("/support/tickets/:id/reply", ...admin, requirePermission("support.manage"), replyAdminSupportTicketController);
+router.patch("/support/tickets/:id/status", ...admin, requirePermission("support.manage"), updateAdminSupportTicketController);
