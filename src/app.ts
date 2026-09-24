@@ -24,6 +24,7 @@ import trustedContactRouter from "./modules/trusted-contact/trusted-contact.rout
 import mediaUploadRouter from "./modules/storage/media-upload.route";
 import languageRouter from "./modules/language/language.route";
 import discoveryRouter from "./modules/discovery/discovery.route";
+import homeContentRouter from "./modules/home-content/home-content.route";
 import { getBranding } from "./modules/admin/branding.service";
 import { errorHandler } from "./middleware/error-handler";
 import { securityHeaders } from "./middleware/security";
@@ -79,5 +80,6 @@ app.use("/api/v1/maps", placeRouteRouter);
 app.use("/api/v1", placeRouteApiRouter);
 app.use("/api/v1", languageRouter);
 app.use("/api/v1/discovery", discoveryRouter);
+app.use("/api/v1/home-banner", homeContentRouter);
 app.use(errorHandler);
 export default app;
