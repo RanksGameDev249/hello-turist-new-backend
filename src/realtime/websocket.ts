@@ -1,9 +1,10 @@
 import crypto from "node:crypto";
 import type { Server, IncomingMessage } from "node:http";
+import type { Duplex } from "node:stream";
 import jwt from "jsonwebtoken";
 import { clearPresence, publishRealtimeEvent, refreshPresence, replayRealtimeEvents, setPresence } from "../core/realtime";
 
-interface Client { socket: import("node:net").Socket; userId: string; presenceKey: string; channel: string; buffer: Buffer; }
+interface Client { socket: Duplex; userId: string; presenceKey: string; channel: string; buffer: Buffer; }
 const clients = new Set<Client>();
 
 function frame(text: string) {
