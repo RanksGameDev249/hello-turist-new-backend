@@ -1,0 +1,93 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: hello-turist-backend
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cloudsql-instances: PROJECT_ID:REGION:INSTANCE_NAME
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: CLOUD_RUN_SERVICE_ACCOUNT
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/hello-turist/hello-turist-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+            - name: HOST
+              value: 0.0.0.0
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-database-url
+                  key: latest
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-redis-url
+                  key: latest
+            - name: ACCESS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-access-token-secret
+                  key: latest
+            - name: REFRESH_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-refresh-token-secret
+                  key: latest
+            - name: FIREBASE_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-firebase-project-id
+                  key: latest
+            - name: FCM_SERVICE_ACCOUNT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-fcm-service-account-email
+                  key: latest
+            - name: FCM_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-fcm-private-key
+                  key: latest
+            - name: GOOGLE_MAPS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-google-maps-api-key
+                  key: latest
+            - name: RAZORPAY_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-razorpay-key-id
+                  key: latest
+            - name: RAZORPAY_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-razorpay-key-secret
+                  key: latest
+            - name: RAZORPAY_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-razorpay-webhook-secret
+                  key: latest
+            - name: CLOUDINARY_CLOUD_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-cloudinary-cloud-name
+                  key: latest
+            - name: CLOUDINARY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-cloudinary-api-key
+                  key: latest
+            - name: CLOUDINARY_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hello-turist-cloudinary-api-secret
+                  key: latest
