@@ -50,15 +50,25 @@ const curatedPlaceBaseSchema = z.object({
 });
 
 const validateCuratedPlaceRules = <T extends z.ZodType>(schema: T) =>
-  schema.superRefine((value: z.infer<T>, ctx) => {
-    if (value.type === "HISTORICAL_PLACE" && !value.history) {
+  schema.superRefine((value, ctx) => {
+    // Zod 4 exposes the generic schema callback as output<T>. Keep the
+    // refinement generic while narrowing only the fields used by these
+    // business rules. This preserves the same runtime validation for both
+    // create and partial update schemas and avoids relying on Zod internals.
+    const data = value as {
+      type?: z.infer<typeof curatedPlaceTypeSchema>;
+      history?: string;
+      sponsorName?: string;
+    };
+
+    if (data.type === "HISTORICAL_PLACE" && !data.history) {
       ctx.addIssue({
         code: "custom",
         path: ["history"],
         message: "Historical information is required for historical places",
       });
     }
-    if (value.type === "SPONSOR" && !value.sponsorName) {
+    if (data.type === "SPONSOR" && !data.sponsorName) {
       ctx.addIssue({
         code: "custom",
         path: ["sponsorName"],
