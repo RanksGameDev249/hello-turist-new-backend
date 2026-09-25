@@ -7,6 +7,7 @@ spec:
     metadata:
       annotations:
         run.googleapis.com/cloudsql-instances: PROJECT_ID:REGION:INSTANCE_NAME
+        run.googleapis.com/network-interfaces: '[{"network":"VPC_NETWORK","subnetwork":"VPC_SUBNET"}]'
         run.googleapis.com/vpc-access-egress: private-ranges-only
     spec:
       serviceAccountName: CLOUD_RUN_SERVICE_ACCOUNT
