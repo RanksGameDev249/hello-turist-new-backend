@@ -7,12 +7,14 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY tsconfig.json ./
 COPY src ./src
 COPY tests ./tests
 COPY scripts ./scripts
+
+RUN chmod +x ./scripts/start-production.sh
 
 RUN npm run build
 
@@ -21,4 +23,4 @@ ENV HOST=0.0.0.0
 
 EXPOSE 8080
 
-CMD ["npm", "start"]
+CMD ["./scripts/start-production.sh"]
