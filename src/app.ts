@@ -28,6 +28,8 @@ import homeContentRouter from "./modules/home-content/home-content.route";
 import { getBranding } from "./modules/admin/branding.service";
 import { errorHandler } from "./middleware/error-handler";
 import { securityHeaders } from "./middleware/security";
+import { connectRedis, redis } from "./core/redis";
+import { prisma } from "./lib/prisma";
 
 dotenv.config();
 validateProductionIntegrations();
@@ -54,6 +56,16 @@ app.use((req, res, next) => {
 app.use(express.json({ verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf); } }));
 app.use(requestIdMiddleware);
 app.get("/health", (_req, res) => res.status(200).json({ success: true, data: { status: "ok" }, error: null, requestId: _req.requestId }));
+app.get("/ready", async (req, res, next) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    await connectRedis();
+    if (!redis.isReady) throw new Error("Redis is not ready");
+    return res.status(200).json({ success: true, data: { status: "ready", database: "ok", redis: "ok" }, error: null, requestId: req.requestId });
+  } catch (error) {
+    return res.status(503).json({ success: false, data: { status: "not_ready" }, error: { code: "DEPENDENCY_NOT_READY" }, requestId: req.requestId });
+  }
+});
 app.get("/api/v1/branding", async (_req, res, next) => {
   try { return res.json({ success: true, data: await getBranding(), error: null }); }
   catch (error) { return next(error); }
