@@ -33,6 +33,26 @@ async function check(name: string, fn: () => Promise<string | void>) {
   }
 }
 
+async function backendHealth() {
+  const response = await request(`${baseUrl}/health`);
+  if (!response.ok) throw new Error(`backend health ${response.status}`);
+  const body = await response.json() as { data?: { status?: string } };
+  if (body.data?.status !== "ok") throw new Error("backend health payload invalid");
+  return "backend reachable";
+}
+
+async function backendReadiness() {
+  const response = await request(`${baseUrl}/ready`);
+  const body = await response.json() as { data?: { status?: string; database?: string; redis?: string }; error?: { code?: string } };
+  if (!response.ok) {
+    throw new Error(`backend readiness ${response.status} (${body.error?.code || "unknown"})`);
+  }
+  if (body.data?.status !== "ready" || body.data.database !== "ok" || body.data.redis !== "ok") {
+    throw new Error("backend readiness payload invalid");
+  }
+  return "PostgreSQL + Redis ready";
+}
+
 async function googleMaps() {
   const key = required("GOOGLE_MAPS_API_KEY");
   const origin = process.env.E2E_MAP_ORIGIN || "30.3782,76.7767";
@@ -58,12 +78,8 @@ async function firebaseFcm() {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({
-    iss: email,
-    sub: email,
-    aud: "https://oauth2.googleapis.com/token",
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    iat: now,
-    exp: now + 3600,
+    iss: email, sub: email, aud: "https://oauth2.googleapis.com/token",
+    scope: "https://www.googleapis.com/auth/firebase.messaging", iat: now, exp: now + 3600,
   })).toString("base64url");
   const unsigned = `${header}.${payload}`;
   const signature = crypto.createSign("RSA-SHA256").update(unsigned).sign(privateKey, "base64url");
@@ -108,25 +124,13 @@ async function cloudinary() {
   const signature = crypto.createHash("sha1").update(`timestamp=${timestamp}${secret}`).digest("hex");
   const body = new URLSearchParams({
     file: "data:text/plain;base64,SGVsbG8gS3VydWtzaGV0cmEgRSJF",
-    api_key: key,
-    timestamp: String(timestamp),
-    signature,
-    type: "authenticated",
-    folder: "hello-kurukshetra-e2e",
-    public_id: `integration-${Date.now()}`,
+    api_key: key, timestamp: String(timestamp), signature,
+    type: "authenticated", folder: "hello-kurukshetra-e2e", public_id: `integration-${Date.now()}`,
   });
   const response = await request(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloud)}/auto/upload`, { method: "POST", body });
   const result = await response.json() as { secure_url?: string; error?: { message?: string } };
   if (!response.ok || !result.secure_url) throw new Error(`Cloudinary: ${result.error?.message || response.status}`);
   return "live authenticated upload succeeded";
-}
-
-async function backendHealth() {
-  const response = await request(`${baseUrl}/health`);
-  if (!response.ok) throw new Error(`backend health ${response.status}`);
-  const body = await response.json() as { data?: { status?: string } };
-  if (body.data?.status !== "ok") throw new Error("backend health payload invalid");
-  return "backend reachable";
 }
 
 async function main() {
@@ -135,6 +139,7 @@ async function main() {
   }
 
   await check("backend health", backendHealth);
+  await check("backend readiness", backendReadiness);
   await check("Google Maps Directions", googleMaps);
   await check("Firebase OAuth + FCM", firebaseFcm);
   await check("Razorpay live order", razorpayOrder);
