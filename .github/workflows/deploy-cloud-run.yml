@@ -72,12 +72,24 @@ jobs:
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
       - name: Deploy to Cloud Run
+        env:
+          RUNTIME_SERVICE_ACCOUNT: hello-turist-cloud-run@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          CLOUD_SQL_INSTANCE: ${{ env.GCP_PROJECT_ID }}:${{ env.GCP_REGION }}:hello-turist-postgres
+          VPC_NETWORK: projects/${{ env.GCP_PROJECT_ID }}/global/networks/default
+          VPC_SUBNET: projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.GCP_REGION }}/subnetworks/default
         run: |
           set -euo pipefail
           gcloud run deploy "$CLOUD_RUN_SERVICE" \
             --image "$IMAGE" \
             --region "$GCP_REGION" \
             --platform managed \
+            --service-account "$RUNTIME_SERVICE_ACCOUNT" \
+            --add-cloudsql-instances "$CLOUD_SQL_INSTANCE" \
+            --network "$VPC_NETWORK" \
+            --subnet "$VPC_SUBNET" \
+            --vpc-egress private-ranges-only \
+            --set-env-vars "NODE_ENV=production,PORT=8080,HOST=0.0.0.0" \
+            --set-secrets "DATABASE_URL=hello-turist-database-url:latest,REDIS_URL=hello-turist-redis-url:latest,ACCESS_TOKEN_SECRET=hello-turist-access-token-secret:latest,REFRESH_TOKEN_SECRET=hello-turist-refresh-token-secret:latest,GOOGLE_MAPS_API_KEY=hello-turist-google-maps-api-key:latest,FIREBASE_PROJECT_ID=hello-turist-firebase-project-id:latest,FCM_SERVICE_ACCOUNT_EMAIL=hello-turist-fcm-service-account-email:latest,FCM_PRIVATE_KEY=hello-turist-fcm-private-key:latest,RAZORPAY_KEY_ID=hello-turist-razorpay-key-id:latest,RAZORPAY_KEY_SECRET=hello-turist-razorpay-key-secret:latest,RAZORPAY_WEBHOOK_SECRET=hello-turist-razorpay-webhook-secret:latest,CLOUDINARY_CLOUD_NAME=hello-turist-cloudinary-cloud-name:latest,CLOUDINARY_API_KEY=hello-turist-cloudinary-api-key:latest,CLOUDINARY_API_SECRET=hello-turist-cloudinary-api-secret:latest" \
             --quiet
 
       - name: Show deployed revision
