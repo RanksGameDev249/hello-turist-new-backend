@@ -45,6 +45,16 @@ async function startServer() {
   });
 }
 
+process.on("SIGTERM", async () => {
+  console.log("SIGTERM received; shutting down gracefully");
+  try { await prisma.$disconnect(); } finally { process.exit(0); }
+});
+
+process.on("SIGINT", async () => {
+  console.log("SIGINT received; shutting down gracefully");
+  try { await prisma.$disconnect(); } finally { process.exit(0); }
+});
+
 startServer().catch((error) => {
   console.error("Backend startup failed:", error);
   process.exit(1);
