@@ -1,28 +1,19 @@
 # State Machines
 
 ## Ride
-```mermaid
-stateDiagram-v2
-    [*] --> SEARCHING
-    SEARCHING --> DRIVER_ASSIGNED
-    SEARCHING --> CANCELLED
-    DRIVER_ASSIGNED --> DRIVER_ARRIVING
-    DRIVER_ASSIGNED --> SEARCHING
-    DRIVER_ARRIVING --> DRIVER_ARRIVED
-    DRIVER_ARRIVING --> CANCELLED
-    DRIVER_ARRIVED --> TRIP_STARTED
-    TRIP_STARTED --> IN_PROGRESS
-    IN_PROGRESS --> NEAR_DESTINATION
-    NEAR_DESTINATION --> COMPLETED
-    IN_PROGRESS --> INTERRUPTED
-    DRIVER_ARRIVING --> EMERGENCY
-    DRIVER_ARRIVED --> EMERGENCY
-    TRIP_STARTED --> EMERGENCY
-    IN_PROGRESS --> EMERGENCY
-    EMERGENCY --> INTERRUPTED
-    INTERRUPTED --> DRIVER_ASSIGNED
-    INTERRUPTED --> COMPLETED
-```
+The backend uses these persisted ride states:
+`REQUESTED → SEARCHING → ASSIGNED → DRIVER_ARRIVING → DRIVER_ARRIVED → IN_PROGRESS → NEAR_DESTINATION → COMPLETED`.
+
+Allowed lifecycle transitions are enforced server-side:
+- `ASSIGNED → DRIVER_ARRIVING`
+- `DRIVER_ARRIVING → DRIVER_ARRIVED`
+- `DRIVER_ARRIVED → IN_PROGRESS`
+- `IN_PROGRESS → NEAR_DESTINATION`
+- `NEAR_DESTINATION → COMPLETED`
+- `IN_PROGRESS → COMPLETED`
+- Active rides may also transition to `INTERRUPTED` through recovery/safety flows.
+
+A driver must call `/arriving` and `/arrived` before `/start`; invalid or concurrent transitions are rejected.
 
 ## Emergency
 ```mermaid
@@ -45,9 +36,10 @@ PENDING → UNDER_VERIFICATION → REJECTED → RESUBMITTED → UNDER_VERIFICATI
 Any verified role may move to SUSPENDED or BLOCKED.
 
 ## Payment
-PENDING → AUTHORIZED → PAID  
+PENDING → AUTHORIZED → CAPTURED  
+CAPTURED → REFUNDED
 PENDING → FAILED  
-PAID → REFUND_PENDING → REFUNDED / PARTIALLY_REFUNDED
+Refunds are tracked separately as `PENDING` / `PROCESSING` → `COMPLETED` or `FAILED`; the payment becomes `REFUNDED` when the non-failed refunded total reaches the captured payment amount.
 
 ## Transition rules
 Every transition must:

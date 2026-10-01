@@ -11,6 +11,7 @@ import providerRouter from "./modules/provider/provider.route";
 import rideRouter from "./modules/ride/ride.route";
 import recoveryRouter from "./modules/recovery/recovery.route";
 import paymentRouter from "./modules/payment/payment.route";
+import { paymentWebhookController } from "./modules/payment/payment.controller";
 import notificationRouter from "./modules/notification/notification.route";
 import safetyRouter from "./modules/safety/safety.route";
 import walletRouter from "./modules/wallet/wallet.route";
@@ -47,7 +48,7 @@ app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-Id");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-Id, Idempotency-Key");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   return next();
@@ -79,6 +80,7 @@ app.use("/api/v1/providers", providerRouter);
 app.use("/api/v1/rides", recoveryRouter);
 app.use("/api/v1/rides", rideRouter);
 app.use("/api/v1/payments", paymentRouter);
+app.post("/api/v1/webhooks/razorpay", paymentWebhookController);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/wallet", walletRouter);
 app.use("/api/v1", safetyRouter);

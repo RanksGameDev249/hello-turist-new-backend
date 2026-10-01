@@ -21,6 +21,7 @@ function handleError(res: Response, requestId: string, error: unknown) {
     GUIDE_ASSIGNMENT_NOT_FOUND: [404, "Guide assignment not found"],
     ASSIGNMENT_ACCESS_DENIED: [403, "You do not have access to this assignment"],
     INVALID_ASSIGNMENT_STATE: [409, "Invalid assignment state"],
+    RIDE_ALREADY_HAS_GUIDE: [409, "A guide is already assigned to this ride"],
   };
   const [status, message] = map[code] ?? [500, "Internal server error"];
   return errorResponse(res, requestId, status, code, message);
