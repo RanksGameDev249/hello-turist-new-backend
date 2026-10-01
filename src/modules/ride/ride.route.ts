@@ -46,7 +46,7 @@ router.post("/:id/start", idempotencyMiddleware(), (req, res) => {
 });
 router.post("/:id/near-destination", idempotencyMiddleware(), nearDestinationController);
 router.post("/:id/complete", idempotencyMiddleware(), completeRideController);
-router.post("/:id/events", (req, res) => {
+router.post("/:id/events", idempotencyMiddleware(), (req, res) => {
   const rideId = req.params.id;
   const isRideStarted = req.body?.type === "RIDE_STARTED";
   if (!isRideStarted || typeof rideId !== "string") return addEventController(req, res);
