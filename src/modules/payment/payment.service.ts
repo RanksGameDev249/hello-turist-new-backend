@@ -148,6 +148,9 @@ export async function listPayments(userId: string) { return prisma.payment.findM
 
 export async function createRefund(userId: string, paymentId: string, input: CreateRefundInput) {
   const result = await prisma.$transaction(async (tx) => {
+    // Serialize refund creation per payment so concurrent requests cannot both pass
+    // the pending-refund check and submit duplicate provider refunds.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${paymentId}))`;
     const payment = await tx.payment.findUnique({ where: { id: paymentId }, include: { refunds: true } });
     if (!payment) throw new Error("PAYMENT_NOT_FOUND");
     if (payment.payerId !== userId) throw new Error("FORBIDDEN");
