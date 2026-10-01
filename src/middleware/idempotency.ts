@@ -29,16 +29,17 @@ function fingerprint(req: Request) {
 }
 
 export function idempotencyMiddleware(ttlSeconds = DEFAULT_TTL_SECONDS) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const key = getKey(req);
     if (!key) {
-      return errorResponse(
+      errorResponse(
         res,
         req.requestId,
         400,
         "IDEMPOTENCY_KEY_REQUIRED",
         "Idempotency-Key header is required for this operation",
       );
+      return;
     }
 
     try {
@@ -51,14 +52,18 @@ export function idempotencyMiddleware(ttlSeconds = DEFAULT_TTL_SECONDS) {
         const parsed = JSON.parse(existing) as StoredResponse | { inProgress: true; fingerprint: string };
         if ("inProgress" in parsed) {
           if (parsed.fingerprint !== requestFingerprint) {
-            return errorResponse(res, req.requestId, 409, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was already used with different request data");
+            errorResponse(res, req.requestId, 409, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was already used with different request data");
+          return;
           }
-          return errorResponse(res, req.requestId, 409, "IDEMPOTENCY_IN_PROGRESS", "The original request is still being processed");
+          errorResponse(res, req.requestId, 409, "IDEMPOTENCY_IN_PROGRESS", "The original request is still being processed");
+          return;
         }
         if (parsed.fingerprint !== requestFingerprint) {
-          return errorResponse(res, req.requestId, 409, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was already used with different request data");
+          errorResponse(res, req.requestId, 409, "IDEMPOTENCY_KEY_REUSED", "Idempotency key was already used with different request data");
+          return;
         }
-        return res.status(parsed.statusCode).json(parsed.body);
+        res.status(parsed.statusCode).json(parsed.body);
+        return;
       }
 
       const claimed = await redis.set(
@@ -67,7 +72,8 @@ export function idempotencyMiddleware(ttlSeconds = DEFAULT_TTL_SECONDS) {
         { NX: true, EX: IN_PROGRESS_TTL_SECONDS },
       );
       if (claimed !== "OK") {
-        return errorResponse(res, req.requestId, 409, "IDEMPOTENCY_IN_PROGRESS", "The original request is still being processed");
+        errorResponse(res, req.requestId, 409, "IDEMPOTENCY_IN_PROGRESS", "The original request is still being processed");
+        return;
       }
 
       const originalJson = res.json.bind(res);
@@ -87,10 +93,11 @@ export function idempotencyMiddleware(ttlSeconds = DEFAULT_TTL_SECONDS) {
         }
       });
 
-      return next();
+      next();
     } catch (error) {
       console.error("IDEMPOTENCY_ERROR:", error);
-      return errorResponse(res, req.requestId, 503, "IDEMPOTENCY_UNAVAILABLE", "Idempotency protection is temporarily unavailable");
+      errorResponse(res, req.requestId, 503, "IDEMPOTENCY_UNAVAILABLE", "Idempotency protection is temporarily unavailable");
+      return;
     }
   };
 }
