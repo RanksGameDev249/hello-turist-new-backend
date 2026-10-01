@@ -9,6 +9,7 @@ router.post("/razorpay/order", createRazorpayOrderController);
 // Documentation-compatible aliases; existing Android clients keep using /razorpay/*.
 router.post("/orders", createRazorpayOrderController);
 router.post("/razorpay/verify", verifyRazorpayPaymentController);
+router.post("/:id/verify", verifyRazorpayPaymentController);
 router.post("/", createPaymentController);
 router.get("/", listPaymentsController);
 router.get("/:id", getPaymentController);
