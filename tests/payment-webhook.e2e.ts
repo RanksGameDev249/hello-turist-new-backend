@@ -11,7 +11,7 @@ async function main() {
   }
   const body = JSON.stringify({ event: "payment.captured", payload: {} });
   const signature = crypto.createHmac("sha256", secret).update(body).digest("hex");
-  const response = await fetch(`${baseUrl}/api/v1/payments/webhook`, {
+  const response = await fetch(`${baseUrl}/api/v1/webhooks/razorpay`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-razorpay-signature": signature, "x-razorpay-event-id": `qa-${Date.now()}` },
     body,
