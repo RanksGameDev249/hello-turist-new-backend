@@ -46,25 +46,65 @@ async function razorpayRequest(path: string, init: RequestInit = {}) {
 }
 
 export async function createRazorpayOrder(userId: string, rideId: string) {
-  const ride = await prisma.ride.findUnique({ where: { id: rideId } });
-  if (!ride) throw new Error("RIDE_NOT_FOUND");
-  if (ride.riderId !== userId) throw new Error("FORBIDDEN");
-  if (ride.status === "CANCELLED") throw new Error("RIDE_CANCELLED");
-  const fare = await calculateFare({ latitude: Number(ride.pickupLatitude), longitude: Number(ride.pickupLongitude) }, { latitude: Number(ride.dropoffLatitude), longitude: Number(ride.dropoffLongitude) });
-  if (fare.currency !== "INR") throw new Error("RAZORPAY_CURRENCY_UNSUPPORTED");
-  const existing = await prisma.payment.findUnique({ where: { rideId } });
-  if (existing) {
-    const metadata = (existing.metadata ?? {}) as Record<string, any>;
-    if (existing.provider === "RAZORPAY" && metadata.razorpayOrderId) return { payment: existing, keyId: razorpayConfig().keyId, orderId: metadata.razorpayOrderId, amount: Math.round(Number(existing.amount) * 100), currency: existing.currency };
-    throw new Error("PAYMENT_ALREADY_EXISTS");
-  }
-  const amount = Math.round(fare.totalFare * 100);
-  const order = await razorpayRequest("/orders", { method: "POST", body: JSON.stringify({ amount, currency: fare.currency, receipt: `ride_${rideId}`.slice(0, 40), notes: { rideId } }) });
-  if (!order?.id) throw new Error("RAZORPAY_ORDER_INVALID");
-  const payment = await prisma.payment.create({ data: { rideId, payerId: userId, amount: fare.totalFare, currency: fare.currency, provider: "RAZORPAY", status: "PENDING", metadata: { fare, razorpayOrderId: order.id, razorpayAmount: amount } }, include: paymentInclude });
-  return { payment, keyId: razorpayConfig().keyId, orderId: order.id, amount, currency: fare.currency };
-}
+  return prisma.$transaction(async (tx) => {
+    // Serialize order creation per ride so concurrent requests cannot create
+    // multiple Razorpay orders before the unique payment row is committed.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${rideId}))`;
 
+    const ride = await tx.ride.findUnique({ where: { id: rideId } });
+    if (!ride) throw new Error("RIDE_NOT_FOUND");
+    if (ride.riderId !== userId) throw new Error("FORBIDDEN");
+    if (ride.status === "CANCELLED") throw new Error("RIDE_CANCELLED");
+
+    const fare = await calculateFare(
+      { latitude: Number(ride.pickupLatitude), longitude: Number(ride.pickupLongitude) },
+      { latitude: Number(ride.dropoffLatitude), longitude: Number(ride.dropoffLongitude) },
+    );
+    if (fare.currency !== "INR") throw new Error("RAZORPAY_CURRENCY_UNSUPPORTED");
+
+    const existing = await tx.payment.findUnique({ where: { rideId } });
+    if (existing) {
+      const metadata = (existing.metadata ?? {}) as Record<string, any>;
+      if (existing.provider === "RAZORPAY" && metadata.razorpayOrderId) {
+        return {
+          payment: existing,
+          keyId: razorpayConfig().keyId,
+          orderId: metadata.razorpayOrderId,
+          amount: Math.round(Number(existing.amount) * 100),
+          currency: existing.currency,
+        };
+      }
+      throw new Error("PAYMENT_ALREADY_EXISTS");
+    }
+
+    const amount = Math.round(fare.totalFare * 100);
+    const order = await razorpayRequest("/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        amount,
+        currency: fare.currency,
+        receipt: `ride_${rideId}`.slice(0, 40),
+        notes: { rideId },
+      }),
+    });
+    if (!order?.id) throw new Error("RAZORPAY_ORDER_INVALID");
+
+    const payment = await tx.payment.create({
+      data: {
+        rideId,
+        payerId: userId,
+        amount: fare.totalFare,
+        currency: fare.currency,
+        provider: "RAZORPAY",
+        status: "PENDING",
+        metadata: { fare, razorpayOrderId: order.id, razorpayAmount: amount },
+      },
+      include: paymentInclude,
+    });
+
+    return { payment, keyId: razorpayConfig().keyId, orderId: order.id, amount, currency: fare.currency };
+  });
+}
 export async function verifyRazorpayPayment(userId: string, input: VerifyRazorpayPaymentInput) {
   const payment = await prisma.payment.findFirst({ where: { payerId: userId, provider: "RAZORPAY", metadata: { path: ["razorpayOrderId"], equals: input.razorpayOrderId } }, include: paymentInclude });
   if (!payment) throw new Error("PAYMENT_NOT_FOUND");
