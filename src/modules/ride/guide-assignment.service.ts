@@ -13,7 +13,7 @@ async function requireApprovedGuide(userId: string) {
 async function requireRideMember(userId: string, rideId: string) {
   const ride = await prisma.ride.findUnique({
     where: { id: rideId },
-    select: { id: true, riderId: true, serviceType: true, status: true, assignments: { select: { driverId: true } } },
+    select: { id: true, riderId: true, serviceType: true, status: true, assignments: { select: { driverId: true, status: true } } },
   });
   if (!ride) throw new Error("RIDE_NOT_FOUND");
   const admin = await prisma.userRoleAssignment.findUnique({ where: { userId_role: { userId, role: "ADMIN" } }, select: { id: true } });
@@ -60,7 +60,7 @@ export async function acceptGuideAssignment(userId: string, rideId: string, assi
   if (assignment.guideId !== userId) throw new Error("ASSIGNMENT_ACCESS_DENIED");
   if (assignment.status !== "OFFERED") throw new Error("INVALID_ASSIGNMENT_STATE");
   const result = await prisma.$transaction(async (tx) => {
-    if (["GUIDE_ONLY", "RIDE_AND_GUIDE"].includes(ride.serviceType)) {\n      const acceptedGuide = await tx.guideAssignment.findFirst({ where: { rideId, status: "ACCEPTED", id: { not: assignmentId } }, select: { id: true } });\n      if (acceptedGuide) throw new Error("RIDE_ALREADY_HAS_GUIDE");\n    }\n    const updated = await tx.guideAssignment.updateMany({ where: { id: assignmentId, rideId, guideId: userId, status: "OFFERED" }, data: { status: "ACCEPTED", acceptedAt: new Date() } });
+    if (["GUIDE_ONLY", "RIDE_AND_GUIDE"].includes(ride.serviceType)) { const acceptedGuide = await tx.guideAssignment.findFirst({ where: { rideId, status: "ACCEPTED", id: { not: assignmentId } }, select: { id: true } }); if (acceptedGuide) throw new Error("RIDE_ALREADY_HAS_GUIDE"); } const updated = await tx.guideAssignment.updateMany({ where: { id: assignmentId, rideId, guideId: userId, status: "OFFERED" }, data: { status: "ACCEPTED", acceptedAt: new Date() } });
     if (updated.count !== 1) throw new Error("INVALID_ASSIGNMENT_STATE");
     if (ride.serviceType === "GUIDE_ONLY") await tx.ride.update({ where: { id: rideId }, data: { status: "ASSIGNED" } });
     await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_ACCEPTED", payload: { role: "GUIDE", assignmentId } } });
