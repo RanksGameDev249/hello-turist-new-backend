@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { updateRoleVerificationSchema, verificationDecisionSchema } from "./admin.schema";
 import { decideVerificationRequest, updateRoleVerification } from "./admin.service";
-import { writeAuditLog } from "./audit.service";
+import { listAdminUsers, listAuditLogs, writeAuditLog } from "./audit.service";
 
 function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -53,6 +53,43 @@ export async function decideVerification(req: Request, res: Response) {
       if (error.message === "DOCUMENT_EXPIRED") return errorResponse(req, res, 400, error.message, "One or more verification documents are expired");
     }
     console.error("ADMIN_VERIFICATION_DECISION_ERROR:", error);
+    return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
+  }
+}
+
+
+function queryInt(value: unknown, fallback: number, max: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(Math.trunc(parsed), 1), max);
+}
+
+export async function listAdminUsersController(req: Request, res: Response) {
+  try {
+    const data = await listAdminUsers({
+      page: queryInt(req.query.page, 1, 100000),
+      limit: queryInt(req.query.limit, 50, 100),
+      status: typeof req.query.status === "string" ? req.query.status : undefined,
+    });
+    return res.status(200).json({ success: true, data, error: null, requestId: req.requestId });
+  } catch (error) {
+    console.error("ADMIN_USERS_LIST_ERROR:", error);
+    return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
+  }
+}
+
+export async function listAuditLogsController(req: Request, res: Response) {
+  try {
+    const data = await listAuditLogs({
+      page: queryInt(req.query.page, 1, 100000),
+      limit: queryInt(req.query.limit, 50, 100),
+      action: typeof req.query.action === "string" ? req.query.action : undefined,
+      entityType: typeof req.query.entityType === "string" ? req.query.entityType : undefined,
+      actorUserId: typeof req.query.actorUserId === "string" ? req.query.actorUserId : undefined,
+    });
+    return res.status(200).json({ success: true, data, error: null, requestId: req.requestId });
+  } catch (error) {
+    console.error("ADMIN_AUDIT_LOGS_LIST_ERROR:", error);
     return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
   }
 }
