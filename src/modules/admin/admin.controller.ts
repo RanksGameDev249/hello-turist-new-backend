@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { updateRoleVerificationSchema, verificationDecisionSchema } from "./admin.schema";
 import { decideVerificationRequest, updateRoleVerification } from "./admin.service";
-import { writeAuditLog } from "./audit.service";
+import { listAdminUsers, listAuditLogs, writeAuditLog } from "./audit.service";
 
 function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -56,3 +56,4 @@ export async function decideVerification(req: Request, res: Response) {
     return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
   }
 }
+\n\nfunction queryInt(value: unknown, fallback: number, max: number) {\n  const parsed = Number(value);\n  if (!Number.isFinite(parsed)) return fallback;\n  return Math.min(Math.max(Math.trunc(parsed), 1), max);\n}\n\nexport async function listAdminUsersController(req: Request, res: Response) {\n  try {\n    const data = await listAdminUsers({\n      page: queryInt(req.query.page, 1, 100000),\n      limit: queryInt(req.query.limit, 50, 100),\n      status: typeof req.query.status === "string" ? req.query.status : undefined,\n    });\n    return res.status(200).json({ success: true, data, error: null, requestId: req.requestId });\n  } catch (error) {\n    console.error("ADMIN_USERS_LIST_ERROR:", error);\n    return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");\n  }\n}\n\nexport async function listAuditLogsController(req: Request, res: Response) {\n  try {\n    const data = await listAuditLogs({\n      page: queryInt(req.query.page, 1, 100000),\n      limit: queryInt(req.query.limit, 50, 100),\n      action: typeof req.query.action === "string" ? req.query.action : undefined,\n      entityType: typeof req.query.entityType === "string" ? req.query.entityType : undefined,\n      actorUserId: typeof req.query.actorUserId === "string" ? req.query.actorUserId : undefined,\n    });\n    return res.status(200).json({ success: true, data, error: null, requestId: req.requestId });\n  } catch (error) {\n    console.error("ADMIN_AUDIT_LOGS_LIST_ERROR:", error);\n    return errorResponse(req, res, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");\n  }\n}\n
