@@ -14,4 +14,5 @@ router.post("/", createPaymentController);
 router.get("/", listPaymentsController);
 router.get("/:id", getPaymentController);
 router.post("/:id/refunds", createRefundController);
+router.post("/:id/refund", createRefundController);
 export default router;
