@@ -22,21 +22,21 @@ router.get("/history", listRidesController);
 router.get("/:id/assignments", listAssignmentsController);
 router.post("/:id/guide-search", guideSearchController);
 router.get("/:id/guide-assignments", listGuideAssignmentsController);
-router.post("/:id/guide-assignments", offerGuideController);
-router.post("/:id/guide-assignments/:assignmentId/accept", acceptGuideAssignmentController);
-router.post("/:id/guide-assignments/:assignmentId/reject", rejectGuideAssignmentController);
-router.post("/:id/assignments/:assignmentId/accept", acceptAssignmentController);
-router.post("/:id/assignments/:assignmentId/reject", rejectAssignmentController);
+router.post("/:id/guide-assignments", idempotencyMiddleware(), offerGuideController);
+router.post("/:id/guide-assignments/:assignmentId/accept", idempotencyMiddleware(), acceptGuideAssignmentController);
+router.post("/:id/guide-assignments/:assignmentId/reject", idempotencyMiddleware(), rejectGuideAssignmentController);
+router.post("/:id/assignments/:assignmentId/accept", idempotencyMiddleware(), acceptAssignmentController);
+router.post("/:id/assignments/:assignmentId/reject", idempotencyMiddleware(), rejectAssignmentController);
 router.get("/:id", getRideController);
-router.post("/:id/cancel", cancelRideController);
-router.post("/:id/assign", assignRideController);
-router.post("/:id/accept", acceptRideController);
-router.post("/:id/reject", rejectRideController);
-router.post("/:id/location", addLocationController);
+router.post("/:id/cancel", idempotencyMiddleware(), cancelRideController);
+router.post("/:id/assign", idempotencyMiddleware(), assignRideController);
+router.post("/:id/accept", idempotencyMiddleware(), acceptRideController);
+router.post("/:id/reject", idempotencyMiddleware(), rejectRideController);
+router.post("/:id/location", idempotencyMiddleware(), addLocationController);
 router.get("/:id/locations", listLocationsController);
-router.post("/:id/arriving", driverArrivingController);
-router.post("/:id/arrived", driverArrivedController);
-router.post("/:id/start", (req, res) => {
+router.post("/:id/arriving", idempotencyMiddleware(), driverArrivingController);
+router.post("/:id/arrived", idempotencyMiddleware(), driverArrivedController);
+router.post("/:id/start", idempotencyMiddleware(), (req, res) => {
   res.once("finish", () => {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       void notifyAcceptedTrustedContactsForRide(req.params.id as string, "RIDE_STARTED", { triggeredBy: req.user?.id }).catch(() => undefined);
@@ -44,8 +44,8 @@ router.post("/:id/start", (req, res) => {
   });
   return startRideController(req, res);
 });
-router.post("/:id/near-destination", nearDestinationController);
-router.post("/:id/complete", completeRideController);
+router.post("/:id/near-destination", idempotencyMiddleware(), nearDestinationController);
+router.post("/:id/complete", idempotencyMiddleware(), completeRideController);
 router.post("/:id/events", (req, res) => {
   const rideId = req.params.id;
   const isRideStarted = req.body?.type === "RIDE_STARTED";
