@@ -6,6 +6,8 @@ const router = Router();
 router.post("/webhook", paymentWebhookController);
 router.use(authMiddleware);
 router.post("/razorpay/order", createRazorpayOrderController);
+// Documentation-compatible aliases; existing Android clients keep using /razorpay/*.
+router.post("/orders", createRazorpayOrderController);
 router.post("/razorpay/verify", verifyRazorpayPaymentController);
 router.post("/", createPaymentController);
 router.get("/", listPaymentsController);
