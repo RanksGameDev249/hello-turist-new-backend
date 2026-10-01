@@ -30,7 +30,9 @@ router.post("/rides/:id/recordings/upload-url", idempotencyMiddleware(), async (
     const data = await prepareRideRecordingUpload(req.user!.id, req.params.id, String(req.body?.contentType ?? ""));
     return res.status(200).json({ success: true, data, error: null });
   } catch (error) {
-    return res.status(400).json({ success: false, data: null, error: error instanceof Error ? error.message : "RECORDING_UPLOAD_FAILED" });
+    const code = error instanceof Error ? error.message : "RECORDING_UPLOAD_FAILED";
+    const status = code === "RIDE_NOT_FOUND" ? 404 : code === "RIDE_ACCESS_DENIED" ? 403 : code === "RECORDING_CONSENT_REQUIRED" ? 409 : 400;
+    return res.status(status).json({ success: false, data: null, error: { code, message: code === "RIDE_ACCESS_DENIED" ? "You do not have access to this ride recording" : "Unable to prepare recording upload" }, requestId: req.requestId });
   }
 });
 router.post("/rides/:id/recordings/complete", idempotencyMiddleware(), async (req, res) => {
@@ -38,7 +40,9 @@ router.post("/rides/:id/recordings/complete", idempotencyMiddleware(), async (re
     const data = await finalizeRideRecording(req.user!.id, req.params.id, String(req.body?.key ?? ""), String(req.body?.contentType ?? ""), req.body?.bytes === undefined ? undefined : Number(req.body.bytes));
     return res.status(201).json({ success: true, data, error: null });
   } catch (error) {
-    return res.status(400).json({ success: false, data: null, error: error instanceof Error ? error.message : "RECORDING_FINALIZE_FAILED" });
+    const code = error instanceof Error ? error.message : "RECORDING_FINALIZE_FAILED";
+    const status = code === "RIDE_NOT_FOUND" ? 404 : code === "RIDE_ACCESS_DENIED" ? 403 : code === "RECORDING_CONSENT_REQUIRED" ? 409 : 400;
+    return res.status(status).json({ success: false, data: null, error: { code, message: code === "RIDE_ACCESS_DENIED" ? "You do not have access to this ride recording" : "Unable to finalize recording" }, requestId: req.requestId });
   }
 });
 router.get("/rides/:id/recordings/:recordingId/access", async (req, res) => {
