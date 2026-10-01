@@ -226,11 +226,21 @@ export async function applyRazorpayWebhook(event: string, payload: any) {
   const payment = await prisma.payment.findUnique({ where: { providerPaymentId: paymentId } });
   if (!payment) throw new Error("PAYMENT_NOT_FOUND");
   if (event === "payment.captured") {
-    if (payment.status !== "CAPTURED" && payment.status !== "REFUNDED") await prisma.payment.update({ where: { id: payment.id }, data: { status: "CAPTURED", paidAt: new Date() } });
+    await prisma.payment.updateMany({
+      where: { id: payment.id, status: { in: ["PENDING", "AUTHORIZED"] } },
+      data: { status: "CAPTURED", paidAt: new Date() },
+    });
   } else if (event === "payment.failed") {
-    if (payment.status !== "CAPTURED" && payment.status !== "REFUNDED") await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED", failedAt: new Date() } });
-  } else if (event === "payment.authorized" && payment.status === "PENDING") {
-    await prisma.payment.update({ where: { id: payment.id }, data: { status: "AUTHORIZED" } });
+    // A failed webhook must never downgrade an already-authorized/captured payment.
+    await prisma.payment.updateMany({
+      where: { id: payment.id, status: "PENDING" },
+      data: { status: "FAILED", failedAt: new Date() },
+    });
+  } else if (event === "payment.authorized") {
+    await prisma.payment.updateMany({
+      where: { id: payment.id, status: "PENDING" },
+      data: { status: "AUTHORIZED" },
+    });
   }
   return prisma.payment.findUnique({ where: { id: payment.id }, include: paymentInclude });
 }
@@ -239,8 +249,12 @@ export async function applyPaymentWebhook(input: PaymentWebhookInput) {
   const payment = await prisma.payment.findUnique({ where: { providerPaymentId: input.providerPaymentId } });
   if (!payment) throw new Error("PAYMENT_NOT_FOUND");
   if (payment.status === "REFUNDED" || payment.status === input.status) return payment;
+  const currentRank: Record<string, number> = { PENDING: 0, AUTHORIZED: 1, CAPTURED: 2, FAILED: 1, REFUNDED: 3 };
+  if ((currentRank[input.status] ?? -1) < (currentRank[payment.status] ?? -1)) return payment;
   const data: { status: "AUTHORIZED" | "CAPTURED" | "FAILED"; paidAt?: Date; failedAt?: Date; metadata?: Prisma.InputJsonValue } = { status: input.status, ...(input.metadata ? { metadata: input.metadata as Prisma.InputJsonValue } : {}) };
   if (input.status === "CAPTURED") data.paidAt = new Date();
   if (input.status === "FAILED") data.failedAt = new Date();
-  return prisma.payment.update({ where: { id: payment.id }, data });
+  const updated = await prisma.payment.updateMany({ where: { id: payment.id, status: payment.status }, data });
+  if (updated.count === 0) return prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
+  return prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
 }
