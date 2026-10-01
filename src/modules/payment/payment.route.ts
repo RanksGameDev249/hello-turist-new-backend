@@ -4,6 +4,8 @@ import { createPaymentController, createRefundController, createRazorpayOrderCon
 
 const router = Router();
 router.post("/webhook", paymentWebhookController);
+// Public compatibility endpoint matching the product API specification.
+router.post("/../webhooks/razorpay", paymentWebhookController);
 router.use(authMiddleware);
 router.post("/razorpay/order", createRazorpayOrderController);
 // Documentation-compatible aliases; existing Android clients keep using /razorpay/*.
