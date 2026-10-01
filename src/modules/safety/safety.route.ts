@@ -50,7 +50,9 @@ router.get("/rides/:id/recordings/:recordingId/access", async (req, res) => {
     const url = await createRecordingAccessUrl(req.user!.id, req.params.id, req.params.recordingId);
     return res.status(200).json({ success: true, data: { url }, error: null });
   } catch (error) {
-    return res.status(403).json({ success: false, data: null, error: error instanceof Error ? error.message : "RECORDING_ACCESS_DENIED" });
+    const code = error instanceof Error ? error.message : "RECORDING_ACCESS_DENIED";
+    const status = code === "RIDE_NOT_FOUND" || code === "RECORDING_NOT_FOUND" ? 404 : code === "RIDE_ACCESS_DENIED" ? 403 : code === "RECORDING_EXPIRED" ? 410 : 403;
+    return res.status(status).json({ success: false, data: null, error: { code, message: code === "RIDE_ACCESS_DENIED" ? "You do not have access to this ride recording" : code === "RECORDING_EXPIRED" ? "This recording has expired" : "Recording access denied" }, requestId: req.requestId });
   }
 });
 
