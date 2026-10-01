@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
+import { idempotencyMiddleware } from "../../middleware/idempotency";
 import { acceptRideController, addEventController, addLocationController, assignRideController, cancelRideController, createRideController, getRideController, listEventsController, listLocationsController, listRidesController, rejectRideController } from "./ride.controller";
 import { driverArrivingController, driverArrivedController, startRideController, nearDestinationController, completeRideController } from "./ride-action.controller";
 import { fareQuoteController } from "./fare.controller";
@@ -14,7 +15,7 @@ router.get("/driver", listDriverRidesController);
 router.post("/fare-quote", fareQuoteController);
 // Documentation-compatible alias. Keep /fare-quote for existing clients.
 router.post("/quote", fareQuoteController);
-router.post("/", createRideController);
+router.post("/", idempotencyMiddleware(), createRideController);
 router.get("/", listRidesController);
 // Documentation-compatible history alias; preserves the cursor-based list contract.
 router.get("/history", listRidesController);
