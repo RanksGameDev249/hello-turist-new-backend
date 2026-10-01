@@ -40,6 +40,8 @@ Base path: `/api/v1`
 - POST `/rides`
 - GET `/rides/:id`
 - POST `/rides/:id/cancel`
+- POST `/rides/:id/arriving`
+- POST `/rides/:id/arrived`
 - POST `/rides/:id/start`
 - POST `/rides/:id/complete`
 - POST `/rides/:id/interrupt`
@@ -106,7 +108,7 @@ Admin endpoints are under `/admin` and require explicit permissions:
 - Validate all request bodies.
 - Return stable machine-readable error codes.
 - Use cursor pagination for large operational lists.
-- Require idempotency keys for booking/payment mutations.
+- Require an `Idempotency-Key` HTTP header for booking, payment, guide-assignment, trusted-contact, emergency and recording mutations protected by the server middleware. Reusing a key with different request data is rejected.
 - Enforce authorization server-side on every endpoint.
 - Never return more location precision or personal data than necessary.
 
