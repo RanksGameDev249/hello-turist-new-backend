@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth";
+import { idempotencyMiddleware } from "../../middleware/idempotency";
 import {
   acceptTrustedContactInvitationController, acknowledgeEmergencyController, createEmergencyIncidentController, createTrustedContactController,
   deleteTrustedContactController, escalateEmergencyController, getEmergencyIncidentController, listTrustedContactsController,
@@ -12,19 +13,19 @@ const router = Router();
 router.use(authMiddleware);
 router.get("/safety", safetyOverviewController);
 router.get("/trusted-contacts", listTrustedContactsController);
-router.post("/trusted-contacts/invitations", createTrustedContactController);
-router.post("/trusted-contacts/invitations/:id/accept", acceptTrustedContactInvitationController);
-router.delete("/trusted-contacts/:id", deleteTrustedContactController);
-router.post("/trips/:id/share", shareTripController);
-router.post("/emergency/incidents", createEmergencyIncidentController);
+router.post("/trusted-contacts/invitations", idempotencyMiddleware(), createTrustedContactController);
+router.post("/trusted-contacts/invitations/:id/accept", idempotencyMiddleware(), acceptTrustedContactInvitationController);
+router.delete("/trusted-contacts/:id", idempotencyMiddleware(), deleteTrustedContactController);
+router.post("/trips/:id/share", idempotencyMiddleware(), shareTripController);
+router.post("/emergency/incidents", idempotencyMiddleware(), createEmergencyIncidentController);
 router.get("/emergency/incidents/:id", getEmergencyIncidentController);
-router.post("/emergency/incidents/:id/acknowledge", acknowledgeEmergencyController);
-router.post("/emergency/incidents/:id/escalate", escalateEmergencyController);
-router.post("/emergency/incidents/:id/resolve", resolveEmergencyController);
+router.post("/emergency/incidents/:id/acknowledge", idempotencyMiddleware(), acknowledgeEmergencyController);
+router.post("/emergency/incidents/:id/escalate", idempotencyMiddleware(), escalateEmergencyController);
+router.post("/emergency/incidents/:id/resolve", idempotencyMiddleware(), resolveEmergencyController);
 router.post("/rides/:id/heartbeat", recordRideHeartbeatController);
-router.post("/rides/:id/recording-consent", createRideRecordingConsentController);
+router.post("/rides/:id/recording-consent", idempotencyMiddleware(), createRideRecordingConsentController);
 
-router.post("/rides/:id/recordings/upload-url", async (req, res) => {
+router.post("/rides/:id/recordings/upload-url", idempotencyMiddleware(), async (req, res) => {
   try {
     const data = await prepareRideRecordingUpload(req.user!.id, req.params.id, String(req.body?.contentType ?? ""));
     return res.status(200).json({ success: true, data, error: null });
@@ -32,7 +33,7 @@ router.post("/rides/:id/recordings/upload-url", async (req, res) => {
     return res.status(400).json({ success: false, data: null, error: error instanceof Error ? error.message : "RECORDING_UPLOAD_FAILED" });
   }
 });
-router.post("/rides/:id/recordings/complete", async (req, res) => {
+router.post("/rides/:id/recordings/complete", idempotencyMiddleware(), async (req, res) => {
   try {
     const data = await finalizeRideRecording(req.user!.id, req.params.id, String(req.body?.key ?? ""), String(req.body?.contentType ?? ""), req.body?.bytes === undefined ? undefined : Number(req.body.bytes));
     return res.status(201).json({ success: true, data, error: null });
