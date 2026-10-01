@@ -27,7 +27,7 @@ router.post("/rides/:id/recording-consent", idempotencyMiddleware(), createRideR
 
 router.post("/rides/:id/recordings/upload-url", idempotencyMiddleware(), async (req, res) => {
   try {
-    const data = await prepareRideRecordingUpload(req.user!.id, req.params.id, String(req.body?.contentType ?? ""));
+    const data = await prepareRideRecordingUpload(req.user!.id, String(req.params.id), String(req.body?.contentType ?? ""));
     return res.status(200).json({ success: true, data, error: null });
   } catch (error) {
     const code = error instanceof Error ? error.message : "RECORDING_UPLOAD_FAILED";
@@ -37,7 +37,7 @@ router.post("/rides/:id/recordings/upload-url", idempotencyMiddleware(), async (
 });
 router.post("/rides/:id/recordings/complete", idempotencyMiddleware(), async (req, res) => {
   try {
-    const data = await finalizeRideRecording(req.user!.id, req.params.id, String(req.body?.key ?? ""), String(req.body?.contentType ?? ""), req.body?.bytes === undefined ? undefined : Number(req.body.bytes));
+    const data = await finalizeRideRecording(req.user!.id, String(req.params.id), String(req.body?.key ?? ""), String(req.body?.contentType ?? ""), req.body?.bytes === undefined ? undefined : Number(req.body.bytes));
     return res.status(201).json({ success: true, data, error: null });
   } catch (error) {
     const code = error instanceof Error ? error.message : "RECORDING_FINALIZE_FAILED";
@@ -47,7 +47,7 @@ router.post("/rides/:id/recordings/complete", idempotencyMiddleware(), async (re
 });
 router.get("/rides/:id/recordings/:recordingId/access", async (req, res) => {
   try {
-    const url = await createRecordingAccessUrl(req.user!.id, req.params.id, req.params.recordingId);
+    const url = await createRecordingAccessUrl(req.user!.id, String(req.params.id), req.params.recordingId);
     return res.status(200).json({ success: true, data: { url }, error: null });
   } catch (error) {
     const code = error instanceof Error ? error.message : "RECORDING_ACCESS_DENIED";
