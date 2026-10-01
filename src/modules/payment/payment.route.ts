@@ -12,7 +12,7 @@ router.post("/razorpay/order", idempotencyMiddleware(), createRazorpayOrderContr
 router.post("/orders", idempotencyMiddleware(), createRazorpayOrderController);
 router.post("/razorpay/verify", idempotencyMiddleware(), verifyRazorpayPaymentController);
 router.post("/:id/verify", idempotencyMiddleware(), verifyRazorpayPaymentController);
-router.post("/", createPaymentController);
+router.post("/", idempotencyMiddleware(), createPaymentController);
 router.get("/", listPaymentsController);
 router.get("/:id", getPaymentController);
 router.post("/:id/refunds", idempotencyMiddleware(), createRefundController);
