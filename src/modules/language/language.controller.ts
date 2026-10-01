@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { updatePreferredLanguage } from "../users/users.service";
+import { getCurrentUser, updatePreferredLanguage } from "../users/users.service";
 import { isSupportedLanguage } from "./language.catalog";
 
 const schema = z.object({ language: z.string().trim().min(2).max(10).refine(isSupportedLanguage, "Unsupported language") });
 
 export async function getMyLanguage(req: Request, res: Response) {
   try {
-    const user = await updatePreferredLanguage(req.user.id, req.user.id ? (await import("../users/users.service")).getCurrentUser(req.user.id).then((value) => value.preferredLanguage) : "en");
+    const user = await getCurrentUser(req.user.id);
     return res.status(200).json({ success: true, data: { language: user.preferredLanguage }, error: null, requestId: req.requestId });
   } catch (error) {
     if (error instanceof Error && error.message === "USER_NOT_FOUND") {
