@@ -65,7 +65,7 @@ export async function acceptGuideAssignment(userId: string, rideId: string, assi
     if (ride.serviceType === "GUIDE_ONLY") await tx.ride.update({ where: { id: rideId }, data: { status: "ASSIGNED" } });
     await tx.rideEvent.create({ data: { rideId, actorUserId: userId, type: "DRIVER_ACCEPTED", payload: { role: "GUIDE", assignmentId } } });
     return tx.guideAssignment.findUnique({ where: { id: assignmentId } });
-  });
+  }, { isolationLevel: "Serializable" });
   void notifyUser(ride.riderId, "Guide accepted", "Your guide accepted the trip.", { rideId, assignmentId, status: result?.status }).catch(() => undefined);
   return result;
 }
