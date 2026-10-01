@@ -12,6 +12,8 @@ const router = Router();
 router.use(authMiddleware);
 router.get("/driver", listDriverRidesController);
 router.post("/fare-quote", fareQuoteController);
+// Documentation-compatible alias. Keep /fare-quote for existing clients.
+router.post("/quote", fareQuoteController);
 router.post("/", createRideController);
 router.get("/", listRidesController);
 router.get("/:id/assignments", listAssignmentsController);
