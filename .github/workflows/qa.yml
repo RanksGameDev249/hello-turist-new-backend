@@ -21,19 +21,37 @@ jobs:
       - name: Security middleware tests
         run: npx tsx tests/security.middleware.test.ts
       - name: E2E smoke
-        run: npm run test:e2e-smoke
+        run: |
+          if [ -z "$SMOKE_BASE_URL" ]; then
+            echo "STAGING_BASE_URL is not configured; skipping staging smoke."
+            exit 0
+          fi
+          npm run test:e2e-smoke
         env:
           SMOKE_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
       - name: Trusted contacts E2E
-        run: npm run test:trusted-contacts
+        run: |
+          if [ -z "$TEST_BASE_URL" ] || [ -z "$TEST_AUTH_TOKEN" ]; then
+            echo "Trusted Contacts E2E credentials are not configured; skipping."
+            exit 0
+          fi
+          npm run test:trusted-contacts
         env:
           NODE_ENV: test
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          TEST_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+          TEST_AUTH_TOKEN: ${{ secrets.TEST_AUTH_TOKEN }}
       - name: Production integration E2E
-        run: npm run test:production-integrations
+        run: |
+          if [ -z "$GOOGLE_MAPS_API_KEY" ] || [ -z "$RAZORPAY_KEY_ID" ] || [ -z "$RAZORPAY_KEY_SECRET" ]; then
+            echo "Production integration credentials are not configured; skipping."
+            exit 0
+          fi
+          npm run test:production-integrations
         env:
           NODE_ENV: production
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          E2E_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
