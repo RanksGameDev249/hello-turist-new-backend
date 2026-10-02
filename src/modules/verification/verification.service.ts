@@ -44,7 +44,7 @@ export async function createVerificationRequest(userId: string, role: ProviderRo
   assertProviderRole(role);
   const assignment = await prisma.userRoleAssignment.findUnique({ where: { userId_role: { userId, role } }, select: { verificationStatus: true } });
   if (!assignment) throw new Error("ROLE_NOT_FOUND");
-  if (assignment.verificationStatus === "APPROVED") throw new Error("ROLE_ALREADY_VERIFIED");
+  if (assignment.verificationStatus === "VERIFIED") throw new Error("ROLE_ALREADY_VERIFIED");
   const activeRequest = await prisma.verificationRequest.findFirst({ where: { userId, role, status: { in: ["PENDING", "UNDER_VERIFICATION", "RESUBMITTED"] } }, orderBy: { createdAt: "desc" } });
   if (activeRequest) throw new Error("VERIFICATION_REQUEST_EXISTS");
   const request = await prisma.verificationRequest.create({
@@ -56,6 +56,31 @@ export async function createVerificationRequest(userId: string, role: ProviderRo
 
 export async function getVerificationRequest(userId: string, requestId: string) {
   return toPublicRequest(await getRequestForUser(userId, requestId));
+}
+
+export async function getLatestVerificationRequest(userId: string, role: ProviderRole) {
+  assertProviderRole(role);
+  const request = await prisma.verificationRequest.findFirst({
+    where: { userId, role },
+    orderBy: { createdAt: "desc" },
+    include: {
+      steps: { orderBy: { createdAt: "asc" } },
+      documents: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          documentType: true,
+          checksum: true,
+          expiryDate: true,
+          verificationStatus: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      liveSession: true,
+    },
+  });
+  return request ? toPublicRequest(request as Awaited<ReturnType<typeof getRequestForUser>>) : null;
 }
 
 export async function addVerificationDocument(userId: string, requestId: string, input: { documentType: string; privateObjectKey: string; checksum?: string; expiryDate?: Date }) {
