@@ -8,6 +8,7 @@ const TYPES = {
   "business-partners": "businessPartner",
 } as const;
 
+function param(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
 function modelFor(type: string) {
   const key = TYPES[type as keyof typeof TYPES];
   if (!key) throw new Error("INVALID_CONTENT_TYPE");
@@ -31,7 +32,7 @@ function payload(body: any) {
 }
 export async function listContentController(req: Request, res: Response) {
   try {
-    const model = modelFor(req.params.type);
+    const type = param(req.params.type); if (!type) throw new Error("INVALID_CONTENT_TYPE"); const model = modelFor(type);
     const rows = await (prisma as any)[model].findMany({ orderBy: { createdAt: "desc" }, take: Math.min(Math.max(Number(req.query.limit) || 100, 1), 200) });
     return res.json({ success: true, data: rows });
   } catch (e) { return res.status(400).json({ success: false, error: (e as Error).message }); }
@@ -39,9 +40,9 @@ export async function listContentController(req: Request, res: Response) {
 export async function createContentController(req: Request, res: Response) {
   try {
     const model = modelFor(req.params.type); const data = payload(req.body);
-    if (!data.name || (req.params.type === "homestays" && (!data.address || data.latitude === null || data.longitude === null))) return res.status(400).json({ success:false,error:"NAME_ADDRESS_AND_LOCATION_REQUIRED" });
+    if (!data.name || (type === "homestays" && (!data.address || data.latitude === null || data.longitude === null))) return res.status(400).json({ success:false,error:"NAME_ADDRESS_AND_LOCATION_REQUIRED" });
     const row = await (prisma as any)[model].create({ data });
-    await writeAuditLog({ actorUserId: req.user!.id, action: "ADMIN_CONTENT_CREATED", entityType: req.params.type.toUpperCase(), entityId: row.id, metadata: { name: row.name }, requestId: req.requestId });
+    await writeAuditLog({ actorUserId: req.user!.id, action: "ADMIN_CONTENT_CREATED", entityType: type.toUpperCase(), entityId: row.id, metadata: { name: row.name }, requestId: req.requestId });
     return res.status(201).json({ success:true,data:row });
   } catch (e) { return res.status(400).json({ success:false,error:(e as Error).message }); }
 }
@@ -49,7 +50,7 @@ export async function updateContentController(req: Request, res: Response) {
   try {
     const model = modelFor(req.params.type); const data = payload(req.body); delete (data as any).name;
     const row = await (prisma as any)[model].update({ where:{id:req.params.id}, data });
-    await writeAuditLog({ actorUserId:req.user!.id, action:"ADMIN_CONTENT_UPDATED", entityType:req.params.type.toUpperCase(), entityId:row.id, metadata:{name:row.name}, requestId:req.requestId });
+    await writeAuditLog({ actorUserId:req.user!.id, action:"ADMIN_CONTENT_UPDATED", entityType:type.toUpperCase(), entityId:row.id, metadata:{name:row.name}, requestId:req.requestId });
     return res.json({success:true,data:row});
   } catch(e) { return res.status(400).json({success:false,error:(e as Error).message}); }
 }
