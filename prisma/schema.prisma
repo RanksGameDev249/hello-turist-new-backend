@@ -237,6 +237,7 @@ model Ride {
   dropoffAddress     String            @map("dropoff_address")
   dropoffLatitude    Decimal           @map("dropoff_latitude") @db.Decimal(10, 7)
   dropoffLongitude   Decimal           @map("dropoff_longitude") @db.Decimal(10, 7)
+  routeStops        Json?             @map("route_stops")
   serviceType        String            @default("RIDE_ONLY") @map("service_type")
   purpose            String?
   paymentMethod      String            @default("RAZORPAY") @map("payment_method")
