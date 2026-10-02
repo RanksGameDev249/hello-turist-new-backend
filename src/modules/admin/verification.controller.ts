@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { listVerificationRequests, getVerificationRequest, updateVerificationRequest } from "./verification.service";
+import { listVerificationRequests, getVerificationRequest, updateVerificationRequest, startAdminWhatsAppLiveSession } from "./verification.service";
 
 const id=(req:Request)=>{const value=req.params.id;if(typeof value!=="string")throw new Error("INVALID_ID");return value;};
 
@@ -36,6 +36,13 @@ export async function getVerificationRequestById(req: Request, res: Response) {
   try {
     const request = await getVerificationRequest(id(req));
     if (!request) return errorResponse(res, 404, "VERIFICATION_REQUEST_NOT_FOUND", "Verification request not found");
+    return res.json({ success: true, data: request });
+  } catch (error) { return handleVerificationError(res, error); }
+}
+
+export async function startWhatsAppLiveVerification(req: Request, res: Response) {
+  try {
+    const request = await startAdminWhatsAppLiveSession(id(req), typeof req.body?.phone === "string" ? req.body.phone : undefined);
     return res.json({ success: true, data: request });
   } catch (error) { return handleVerificationError(res, error); }
 }
