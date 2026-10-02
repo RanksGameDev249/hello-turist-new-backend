@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { prisma } from "../../core/prisma";
+import { calculateFare } from "../ride/fare.service";
 import type { AdRewardInput, CreateRedeemCodeInput, WalletConfigInput } from "./wallet.schema";
 
 export async function getWallet(userId:string){await prisma.$executeRaw`INSERT INTO wallet_accounts(user_id) VALUES(${userId}::uuid) ON CONFLICT(user_id) DO NOTHING`;const rows=await prisma.$queryRaw<Array<{balance_coins:number}>>`SELECT balance_coins FROM wallet_accounts WHERE user_id=${userId}::uuid`;const passes=await prisma.$queryRaw<Array<{id:string;starts_at:Date;expires_at:Date}>>`SELECT id,starts_at,expires_at FROM wallet_monthly_passes WHERE user_id=${userId}::uuid AND expires_at>NOW() ORDER BY expires_at DESC`;return{balanceCoins:rows[0]?.balance_coins??0,activeMonthlyPasses:passes}}
@@ -51,7 +52,6 @@ export async function listRedeemCodes(){return prisma.$queryRaw`SELECT id,code,t
 export async function registerDevice(userId:string,token:string){await prisma.$executeRaw`INSERT INTO notification_devices(user_id,fcm_token,last_seen_at,updated_at) VALUES(${userId}::uuid,${token},NOW(),NOW()) ON CONFLICT(fcm_token) DO UPDATE SET user_id=EXCLUDED.user_id,enabled=true,last_seen_at=NOW(),updated_at=NOW()`;return{registered:true}}
 
 export async function payRideWithWallet(userId:string,rideId:string){
-  const {calculateFare}=await import("../ride/fare.service");
   return prisma.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${rideId}))`;
     const ride=await tx.ride.findUnique({where:{id:rideId}});
