@@ -17,7 +17,7 @@ export async function updateRidePricingController(req: Request, res: Response) {
     const data = await updateRidePricing({
       baseFare: numberField(req.body?.baseFare, "BASE_FARE"),
       perKm: numberField(req.body?.perKm, "PER_KM"),
-      minimumFare: numberField(req.body?.minimumFare, "MINIMUM_FARE"),
+      minimumFare: numberField(req.body?.minimumFare, "MINIMUM_FARE"), guideFee: numberField(req.body?.guideFee, "GUIDE_FEE"), gstPercent: numberField(req.body?.gstPercent, "GST_PERCENT"),
     });
     return res.json({ success: true, data, error: null });
   } catch (e) {
