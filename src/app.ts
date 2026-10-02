@@ -26,6 +26,7 @@ import mediaUploadRouter from "./modules/storage/media-upload.route";
 import languageRouter from "./modules/language/language.route";
 import discoveryRouter from "./modules/discovery/discovery.route";
 import homeContentRouter from "./modules/home-content/home-content.route";
+import sharedTripRouter from "./modules/shared-trip/shared-trip.route";
 import { getBranding } from "./modules/admin/branding.service";
 import { errorHandler } from "./middleware/error-handler";
 import { securityHeaders } from "./middleware/security";
@@ -71,6 +72,7 @@ app.get("/api/v1/branding", async (_req, res, next) => {
   try { return res.json({ success: true, data: await getBranding(), error: null }); }
   catch (error) { return next(error); }
 });
+app.use("/api/v1/shared-trips", sharedTripRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/admin", adminRouter);

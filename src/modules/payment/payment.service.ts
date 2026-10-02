@@ -59,6 +59,7 @@ export async function createRazorpayOrder(userId: string, rideId: string) {
     const fare = await calculateFare(
       { latitude: Number(ride.pickupLatitude), longitude: Number(ride.pickupLongitude) },
       { latitude: Number(ride.dropoffLatitude), longitude: Number(ride.dropoffLongitude) },
+      { destinations: Array.isArray(ride.routeStops) ? ride.routeStops as any : [], serviceType: ride.serviceType as any },
     );
     if (fare.currency !== "INR") throw new Error("RAZORPAY_CURRENCY_UNSUPPORTED");
 
@@ -132,7 +133,7 @@ export async function createPayment(userId: string, input: CreatePaymentInput) {
   if (ride.status === "CANCELLED") throw new Error("RIDE_CANCELLED");
   const existing = await prisma.payment.findUnique({ where: { rideId: input.rideId } });
   if (existing) throw new Error("PAYMENT_ALREADY_EXISTS");
-  const fare = await calculateFare({ latitude: Number(ride.pickupLatitude), longitude: Number(ride.pickupLongitude) }, { latitude: Number(ride.dropoffLatitude), longitude: Number(ride.dropoffLongitude) });
+  const fare = await calculateFare({ latitude: Number(ride.pickupLatitude), longitude: Number(ride.pickupLongitude) }, { latitude: Number(ride.dropoffLatitude), longitude: Number(ride.dropoffLongitude) }, { destinations: Array.isArray(ride.routeStops) ? ride.routeStops as any : [], serviceType: ride.serviceType as any });
   if (input.currency !== fare.currency || Math.abs(input.amount - fare.totalFare) > 0.01) throw new Error("PAYMENT_AMOUNT_MISMATCH");
   return prisma.payment.create({ data: { rideId: input.rideId, payerId: userId, amount: fare.totalFare, currency: fare.currency, provider: input.provider, metadata: { ...(input.metadata ?? {}), fare } }, include: paymentInclude });
 }
