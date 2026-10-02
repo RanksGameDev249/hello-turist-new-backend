@@ -15,6 +15,7 @@ function handleVerificationError(res: Response, error: unknown) {
     INVALID_VERIFICATION_STATE: [409, "Verification request is not awaiting review"],
     DOCUMENTS_REQUIRED: [400, "At least one verification document is required"],
     LIVE_SESSION_REQUIRED: [400, "Live verification must be in progress before approval"],
+    WHATSAPP_LIVE_SESSION_REQUIRED: [400, "Verification requires an admin-tracked WhatsApp live session"],
     DOCUMENT_EXPIRED: [400, "One or more verification documents are expired"],
   };
   const mapped = map[code];
