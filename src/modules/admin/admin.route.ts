@@ -20,6 +20,7 @@ import { listAdminNotifications, sendAdminNotification } from "./notification.co
 import { listAdminPromotionsController, createAdminPromotionController, updateAdminPromotionController, deactivateAdminPromotionController } from "./promotion.controller";
 import { listAdminSupportTicketsController, replyAdminSupportTicketController, updateAdminSupportTicketController } from "./support-admin.controller";
 import { listContentController, createContentController, updateContentController, deleteContentController } from "./content.controller";
+import { signAdminContentImageUpload } from "./content-upload.controller";
 
 const router = Router();
 const admin = [authMiddleware, adminMiddleware] as const;
@@ -43,6 +44,7 @@ router.get("/people/:id", ...admin, requirePermission("users.read"), getPersonBy
 router.post("/people", ...admin, requirePermission("users.manage"), adminMutationLimit, idempotencyMiddleware(), createPersonController);
 router.patch("/people/:id", ...admin, requirePermission("users.manage"), adminMutationLimit, idempotencyMiddleware(), updatePersonController);
 router.delete("/people/:id", ...admin, requirePermission("users.manage"), adminMutationLimit, idempotencyMiddleware(), deletePersonController);
+router.post("/content-image/upload-signature", ...admin, requirePermission("content.manage"), adminMutationLimit, signAdminContentImageUpload);
 router.get("/content/:type", ...admin, requirePermission("content.read"), listContentController);
 router.post("/content/:type", ...admin, requirePermission("content.manage"), adminMutationLimit, idempotencyMiddleware(), createContentController);
 router.patch("/content/:type/:id", ...admin, requirePermission("content.manage"), adminMutationLimit, idempotencyMiddleware(), updateContentController);
