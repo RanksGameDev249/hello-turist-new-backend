@@ -8,9 +8,11 @@ import {
   createRideRecordingConsentController,
 } from "./safety.controller";
 import { createRecordingAccessUrl, finalizeRideRecording, prepareRideRecordingUpload } from "../ride-safety/recording.service";
+import { authenticatedSharedTripRouter } from "./shared-trip.route";
 
 const router = Router();
 router.use(authMiddleware);
+router.use(authenticatedSharedTripRouter);
 router.get("/safety", safetyOverviewController);
 router.get("/trusted-contacts", listTrustedContactsController);
 router.post("/trusted-contacts/invitations", idempotencyMiddleware(), createTrustedContactController);
