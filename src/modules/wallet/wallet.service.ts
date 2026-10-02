@@ -49,3 +49,28 @@ export async function updateConfig(adminId:string,input:WalletConfigInput){await
 export async function createRedeemCode(input:CreateRedeemCodeInput){if(input.type==="COIN_REWARD"&&!input.coinCost)throw new Error("COIN_COST_REQUIRED");if(input.type==="MONTHLY_PASS"&&!input.passMonths)throw new Error("PASS_MONTHS_REQUIRED");await prisma.$executeRaw`INSERT INTO wallet_redeem_codes(code,type,coin_cost,pass_months,terms,expires_at) VALUES(${input.code},${input.type},${input.coinCost??null},${input.passMonths??null},${input.terms??null},${input.expiresAt?new Date(input.expiresAt):null})`;return{code:input.code,type:input.type}}
 export async function listRedeemCodes(){return prisma.$queryRaw`SELECT id,code,type,coin_cost AS "coinCost",pass_months AS "passMonths",terms,expires_at AS "expiresAt",redeemed_by AS "redeemedBy",redeemed_at AS "redeemedAt",created_at AS "createdAt" FROM wallet_redeem_codes ORDER BY created_at DESC LIMIT 500`}
 export async function registerDevice(userId:string,token:string){await prisma.$executeRaw`INSERT INTO notification_devices(user_id,fcm_token,last_seen_at,updated_at) VALUES(${userId}::uuid,${token},NOW(),NOW()) ON CONFLICT(fcm_token) DO UPDATE SET user_id=EXCLUDED.user_id,enabled=true,last_seen_at=NOW(),updated_at=NOW()`;return{registered:true}}
+
+export async function payRideWithWallet(userId:string,rideId:string){
+  const {calculateFare}=await import("../ride/fare.service");
+  return prisma.$transaction(async tx=>{
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${rideId}))`;
+    const ride=await tx.ride.findUnique({where:{id:rideId}});
+    if(!ride)throw new Error("RIDE_NOT_FOUND");
+    if(ride.riderId!==userId)throw new Error("FORBIDDEN");
+    if(ride.status==="CANCELLED")throw new Error("RIDE_CANCELLED");
+    const existing=await tx.payment.findUnique({where:{rideId}});
+    if(existing){if(existing.provider==="WALLET"&&existing.status==="CAPTURED")return existing;throw new Error("PAYMENT_ALREADY_EXISTS");}
+    const fare=await calculateFare(
+      {latitude:Number(ride.pickupLatitude),longitude:Number(ride.pickupLongitude)},
+      {latitude:Number(ride.dropoffLatitude),longitude:Number(ride.dropoffLongitude)},
+      {destinations:Array.isArray(ride.routeStops)?ride.routeStops as any:[],serviceType:ride.serviceType as any}
+    );
+    const coins=Math.ceil(fare.totalFare);
+    await tx.$executeRaw`INSERT INTO wallet_accounts(user_id) VALUES(${userId}::uuid) ON CONFLICT(user_id) DO NOTHING`;
+    const wallet=await tx.$queryRaw<Array<{id:string;balance_coins:number}>>`SELECT id,balance_coins FROM wallet_accounts WHERE user_id=${userId}::uuid FOR UPDATE`;
+    if((wallet[0]?.balance_coins??0)<coins)throw new Error("INSUFFICIENT_WALLET_COINS");
+    const updated=await tx.$queryRaw<Array<{balance_coins:number}>>`UPDATE wallet_accounts SET balance_coins=balance_coins-${coins},updated_at=NOW() WHERE user_id=${userId}::uuid RETURNING balance_coins`;
+    await tx.$executeRaw`INSERT INTO wallet_ledger(user_id,wallet_id,amount_coins,balance_after,type,reference_id,metadata) VALUES(${userId}::uuid,${wallet[0].id}::uuid,${-coins},${updated[0].balance_coins},'RIDE_PAYMENT',${rideId},${JSON.stringify({totalFare:fare.totalFare,coins})}::jsonb)`;
+    return tx.payment.create({data:{rideId,payerId:userId,amount:fare.totalFare,currency:"INR",provider:"WALLET",status:"CAPTURED",paidAt:new Date(),metadata:{fare,walletCoins:coins}},include:{refunds:{orderBy:{createdAt:"desc"},take:10},ride:{select:{id:true,riderId:true,status:true}}}});
+  });
+}
