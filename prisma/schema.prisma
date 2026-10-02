@@ -45,6 +45,8 @@ model User {
   passwordHash      String     @map("password_hash")
   status            UserStatus @default(ACTIVE)
   preferredLanguage String     @default("en") @map("preferred_language")
+  dateOfBirth      DateTime?  @map("date_of_birth") @db.Date
+  gender           String?    @db.VarChar(32)
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
   deletedAt         DateTime?  @map("deleted_at")
