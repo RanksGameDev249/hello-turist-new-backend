@@ -1,0 +1,3 @@
+import type { Request, Response } from "express";
+import { getPublicSharedTrip } from "./shared-trip.service";
+export async function publicSharedTripController(req:Request,res:Response){try{const data=await getPublicSharedTrip(String(req.params.shareId));return res.json({success:true,data,error:null,requestId:req.requestId});}catch(error){const code=error instanceof Error?error.message:"SHARED_TRIP_FAILED";const status=code==="SHARED_TRIP_NOT_FOUND"||code==="RIDE_NOT_FOUND"?404:code==="SHARED_TRIP_EXPIRED"?410:400;return res.status(status).json({success:false,data:null,error:{code,message:"Shared trip is unavailable"},requestId:req.requestId});}}
