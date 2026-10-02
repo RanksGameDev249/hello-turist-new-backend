@@ -49,7 +49,29 @@ async function hasAnyPermission(userId: string, required: readonly string[]) {
     WHERE "user_id" = ${userId}::uuid
       AND "permission" = ANY(${required}::text[])
   `;
-  return rows.length > 0;
+  if (rows.length > 0) return true;
+
+  // Backward-compatible bootstrap for ADMIN accounts created after the
+  // permissions migration. A real permission set still takes precedence;
+  // only an entirely empty set receives the default admin permissions.
+  const adminRole = await prisma.$queryRaw<Array<{ role: string }>>`
+    SELECT "role"::text AS "role"
+    FROM "user_roles"
+    WHERE "user_id" = ${userId}::uuid AND "role" = 'ADMIN'
+    LIMIT 1
+  `;
+  if (adminRole.length === 0) return false;
+
+  await prisma.$transaction(async (tx) => {
+    for (const permission of ADMIN_PERMISSIONS) {
+      await tx.$executeRaw`
+        INSERT INTO "admin_user_permissions" ("id", "user_id", "permission", "updated_at")
+        VALUES (gen_random_uuid(), ${userId}::uuid, ${permission}, CURRENT_TIMESTAMP)
+        ON CONFLICT ("user_id", "permission") DO NOTHING
+      `;
+    }
+  });
+  return required.some((permission) => (ADMIN_PERMISSIONS as readonly string[]).includes(permission));
 }
 
 export function requirePermission(...required: AdminPermission[]) {
