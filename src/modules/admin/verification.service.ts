@@ -47,6 +47,7 @@ export async function updateVerificationRequest(id: string, status: "VERIFIED" |
 
     if (existing.documents.length === 0) throw new Error("DOCUMENTS_REQUIRED");
     if (!existing.liveSession || existing.liveSession.status !== "IN_PROGRESS") throw new Error("LIVE_SESSION_REQUIRED");
+    if (!existing.liveSession.providerReference.startsWith("WHATSAPP:")) throw new Error("WHATSAPP_LIVE_SESSION_REQUIRED");
     if (existing.documents.some((document) => document.expiryDate && document.expiryDate <= new Date())) throw new Error("DOCUMENT_EXPIRED");
   }
 
