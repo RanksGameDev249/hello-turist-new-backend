@@ -18,7 +18,7 @@ async function avatarFor(userId: string) {
 function profilePayload(user: any, avatarUrl: string | null) {
   const age = calculateAge(user.dateOfBirth);
   const basicProfileComplete = user.name.trim().length >= 2 && !!avatarUrl && !!user.dateOfBirth && !!user.gender;
-  return { ...user, age, avatarUrl, profileImageUrl: avatarUrl, profileCompleted: basicProfileComplete && user.roles.length > 0, profileCompletion: { basicProfileComplete, roleSelected: user.roles.length > 0, nextRole: user.roles[0]?.role ?? null } };
+  return { ...user, dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().slice(0, 10) : null, age, avatarUrl, profileImageUrl: avatarUrl, profileCompleted: basicProfileComplete && user.roles.length > 0, profileCompletion: { basicProfileComplete, roleSelected: user.roles.length > 0, nextRole: user.roles[0]?.role ?? null } };
 }
 
 export async function getCurrentUser(userId: string) {
