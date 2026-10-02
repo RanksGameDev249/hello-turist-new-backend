@@ -4,6 +4,8 @@ import { prisma } from "../core/prisma";
 export const ADMIN_PERMISSIONS = [
   "users.read",
   "users.manage",
+  "content.read",
+  "content.manage",
   "drivers.verify",
   "guides.verify",
   "rides.read",

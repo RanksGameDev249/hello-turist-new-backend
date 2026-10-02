@@ -1,8 +1,12 @@
 import { Request, Response } from "express";
 import { addLiveSessionSchema, addVerificationDocumentSchema, createVerificationRequestSchema } from "./verification.schema";
-import { addVerificationDocument, createOrUpdateLiveSession, createVerificationRequest, getVerificationRequest, resubmitVerification, submitVerificationForReview } from "./verification.service";
+import { addVerificationDocument, createOrUpdateLiveSession, createVerificationRequest, getLatestVerificationRequest, getVerificationRequest, resubmitVerification, submitVerificationForReview } from "./verification.service";
 
 function param(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
+function queryParam(value: unknown) {
+  if (Array.isArray(value)) return typeof value[0] === "string" ? value[0] : undefined;
+  return typeof value === "string" ? value : undefined;
+}
 function sendError(res: Response, req: Request, status: number, code: string, message: string, details?: unknown) { return res.status(status).json({ success: false, data: null, error: { code, message, ...(details !== undefined ? { details } : {}) }, requestId: req.requestId }); }
 function handleServiceError(error: unknown, req: Request, res: Response) {
   if (!(error instanceof Error)) return sendError(res, req, 500, "INTERNAL_SERVER_ERROR", "Something went wrong");
@@ -16,6 +20,22 @@ function handleServiceError(error: unknown, req: Request, res: Response) {
 }
 
 export async function createRequest(req: Request, res: Response) { const parsed = createVerificationRequestSchema.safeParse(req.body); if (!parsed.success) return sendError(res, req, 400, "VALIDATION_ERROR", "Invalid request body", parsed.error.flatten()); try { return res.status(201).json({ success: true, data: await createVerificationRequest(req.user.id, parsed.data.role), error: null, requestId: req.requestId }); } catch (error) { return handleServiceError(error, req, res); } }
+
+export async function getLatest(req: Request, res: Response) {
+  const role = queryParam(req.query.role);
+  if (role !== "DRIVER" && role !== "GUIDE") return sendError(res, req, 400, "INVALID_ROLE", "Role must be DRIVER or GUIDE");
+  try {
+    return res.status(200).json({
+      success: true,
+      data: await getLatestVerificationRequest(req.user.id, role),
+      error: null,
+      requestId: req.requestId,
+    });
+  } catch (error) {
+    return handleServiceError(error, req, res);
+  }
+}
+
 export async function getRequest(req: Request, res: Response) { const requestId = param(req.params.id); if (!requestId) return sendError(res, req, 400, "INVALID_REQUEST", "Verification request id is required"); try { return res.status(200).json({ success: true, data: await getVerificationRequest(req.user.id, requestId), error: null, requestId: req.requestId }); } catch (error) { return handleServiceError(error, req, res); } }
 export async function addDocument(req: Request, res: Response) { const requestId = param(req.params.id); if (!requestId) return sendError(res, req, 400, "INVALID_REQUEST", "Verification request id is required"); const parsed = addVerificationDocumentSchema.safeParse(req.body); if (!parsed.success) return sendError(res, req, 400, "VALIDATION_ERROR", "Invalid document data", parsed.error.flatten()); try { return res.status(201).json({ success: true, data: await addVerificationDocument(req.user.id, requestId, parsed.data), error: null, requestId: req.requestId }); } catch (error) { return handleServiceError(error, req, res); } }
 export async function addLiveSession(req: Request, res: Response) { const requestId = param(req.params.id); if (!requestId) return sendError(res, req, 400, "INVALID_REQUEST", "Verification request id is required"); const parsed = addLiveSessionSchema.safeParse(req.body); if (!parsed.success) return sendError(res, req, 400, "VALIDATION_ERROR", "Invalid live session data", parsed.error.flatten()); try { return res.status(200).json({ success: true, data: await createOrUpdateLiveSession(req.user.id, requestId, parsed.data), error: null, requestId: req.requestId }); } catch (error) { return handleServiceError(error, req, res); } }

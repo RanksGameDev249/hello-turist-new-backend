@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { listVerificationRequests, getVerificationRequest, updateVerificationRequest } from "./verification.service";
+import { listVerificationRequests, getVerificationRequest, updateVerificationRequest, startAdminWhatsAppLiveSession } from "./verification.service";
 
 const id=(req:Request)=>{const value=req.params.id;if(typeof value!=="string")throw new Error("INVALID_ID");return value;};
 
@@ -15,6 +15,7 @@ function handleVerificationError(res: Response, error: unknown) {
     INVALID_VERIFICATION_STATE: [409, "Verification request is not awaiting review"],
     DOCUMENTS_REQUIRED: [400, "At least one verification document is required"],
     LIVE_SESSION_REQUIRED: [400, "Live verification must be in progress before approval"],
+    WHATSAPP_LIVE_SESSION_REQUIRED: [400, "Verification requires an admin-tracked WhatsApp live session"],
     DOCUMENT_EXPIRED: [400, "One or more verification documents are expired"],
   };
   const mapped = map[code];
@@ -36,6 +37,13 @@ export async function getVerificationRequestById(req: Request, res: Response) {
   try {
     const request = await getVerificationRequest(id(req));
     if (!request) return errorResponse(res, 404, "VERIFICATION_REQUEST_NOT_FOUND", "Verification request not found");
+    return res.json({ success: true, data: request });
+  } catch (error) { return handleVerificationError(res, error); }
+}
+
+export async function startWhatsAppLiveVerification(req: Request, res: Response) {
+  try {
+    const request = await startAdminWhatsAppLiveSession(id(req), typeof req.body?.phone === "string" ? req.body.phone : undefined);
     return res.json({ success: true, data: request });
   } catch (error) { return handleVerificationError(res, error); }
 }
