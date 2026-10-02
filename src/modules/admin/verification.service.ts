@@ -5,7 +5,7 @@ import { createNotification } from "../notification/notification.service";
 export async function listVerificationRequests(input: { page: number; limit: number; status?: string; role?: "DRIVER" | "GUIDE" }) {
   const where = { ...(input.status ? { status: input.status as any } : {}), ...(input.role ? { role: input.role } : {}) };
   const [items, total] = await Promise.all([
-    prisma.verificationRequest.findMany({ where, include: { user: { select: { id: true, name: true, username: true, email: true } }, steps: true, documents: true, liveSession: true }, orderBy: { createdAt: "desc" }, skip: (input.page - 1) * input.limit, take: input.limit }),
+    prisma.verificationRequest.findMany({ where, include: { user: { select: { id: true, name: true, username: true, email: true, phone: true } }, steps: true, documents: true, liveSession: true }, orderBy: { createdAt: "desc" }, skip: (input.page - 1) * input.limit, take: input.limit }),
     prisma.verificationRequest.count({ where }),
   ]);
   return { items, pagination: { page: input.page, limit: input.limit, total, totalPages: Math.ceil(total / input.limit) } };
@@ -13,6 +13,28 @@ export async function listVerificationRequests(input: { page: number; limit: num
 
 export async function getVerificationRequest(id: string) {
   return prisma.verificationRequest.findUnique({ where: { id }, include: { user: { select: { id: true, name: true, username: true, email: true } }, steps: true, documents: true, liveSession: true } });
+}
+
+export async function startAdminWhatsAppLiveSession(id: string, phone?: string) {
+  const request = await prisma.verificationRequest.findUnique({ where: { id }, select: { id: true, userId: true, role: true, status: true, liveSession: true } });
+  if (!request) throw new Error("VERIFICATION_REQUEST_NOT_FOUND");
+  if (![ "PENDING", "UNDER_VERIFICATION", "RESUBMITTED" ].includes(request.status)) throw new Error("INVALID_VERIFICATION_STATE");
+  const normalized = (phone ?? "").replace(/[^0-9]/g, "");
+  const providerReference = normalized ? "WHATSAPP:" + normalized : "WHATSAPP:MANUAL";
+  const now = new Date();
+  const result = await prisma.$transaction(async (tx) => {
+    const live = await tx.verificationLiveSession.upsert({
+      where: { verificationRequestId: id },
+      update: { providerReference, status: "IN_PROGRESS", startedAt: now },
+      create: { verificationRequestId: id, providerReference, status: "IN_PROGRESS", startedAt: now },
+    });
+    await tx.verificationStep.update({
+      where: { verificationRequestId_step: { verificationRequestId: id, step: "LIVE_SESSION" } },
+      data: { status: "IN_PROGRESS", completedAt: null },
+    });
+    return live;
+  });
+  return result;
 }
 
 /** Application-owned verification: admin approval is the authoritative verification event. */
@@ -25,6 +47,7 @@ export async function updateVerificationRequest(id: string, status: "VERIFIED" |
 
     if (existing.documents.length === 0) throw new Error("DOCUMENTS_REQUIRED");
     if (!existing.liveSession || existing.liveSession.status !== "IN_PROGRESS") throw new Error("LIVE_SESSION_REQUIRED");
+    if (!existing.liveSession.providerReference.startsWith("WHATSAPP:")) throw new Error("WHATSAPP_LIVE_SESSION_REQUIRED");
     if (existing.documents.some((document) => document.expiryDate && document.expiryDate <= new Date())) throw new Error("DOCUMENT_EXPIRED");
   }
 

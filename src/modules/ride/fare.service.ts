@@ -1,78 +1,11 @@
 import { prisma } from "../../core/prisma";
 import { GooglePlaceRouteAdapter } from "../place-route/place-route.adapter";
-
-export type RidePricingConfig = {
-  baseFare: number;
-  perKm: number;
-  minimumFare: number;
-  currency: "INR";
-  updatedAt?: Date;
-};
-
-export type FareQuote = {
-  currency: "INR";
-  distanceMeters: number;
-  durationSeconds: number;
-  baseFare: number;
-  distanceFare: number;
-  totalFare: number;
-};
-
-const DEFAULT_PRICING: RidePricingConfig = {
-  baseFare: 20,
-  perKm: 5,
-  minimumFare: 20,
-  currency: "INR",
-};
-
-function money(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function parsePricing(value: unknown): RidePricingConfig {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("RIDE_PRICING_CONFIG_MISSING");
-  const source = value as Record<string, unknown>;
-  const baseFare = Number(source.baseFare);
-  const perKm = Number(source.perKm);
-  const minimumFare = Number(source.minimumFare);
-  if (![baseFare, perKm, minimumFare].every(Number.isFinite) || baseFare < 0 || perKm < 0 || minimumFare < 0) {
-    throw new Error("RIDE_PRICING_CONFIG_INVALID");
-  }
-  return { baseFare, perKm, minimumFare, currency: "INR" };
-}
-
-export async function getRidePricing(): Promise<RidePricingConfig> {
-  const row = await prisma.appSetting.findUnique({ where: { key: "RIDE_PRICING" } });
-  if (!row) return DEFAULT_PRICING;
-  return { ...parsePricing(row.value), updatedAt: row.updatedAt };
-}
-
-export async function updateRidePricing(input: Partial<RidePricingConfig>): Promise<RidePricingConfig> {
-  const current = await getRidePricing();
-  const next = parsePricing({
-    baseFare: input.baseFare ?? current.baseFare,
-    perKm: input.perKm ?? current.perKm,
-    minimumFare: input.minimumFare ?? current.minimumFare,
-  });
-  const row = await prisma.appSetting.upsert({
-    where: { key: "RIDE_PRICING" },
-    create: { key: "RIDE_PRICING", value: next },
-    update: { value: next },
-  });
-  return { ...parsePricing(row.value), updatedAt: row.updatedAt };
-}
-
-export async function calculateFare(origin: { latitude: number; longitude: number }, destination: { latitude: number; longitude: number }): Promise<FareQuote> {
-  const { baseFare, perKm, minimumFare } = await getRidePricing();
-  const route = await new GooglePlaceRouteAdapter().getRoute(origin, destination);
-  const distanceFare = (route.distanceMeters / 1000) * perKm;
-  const totalFare = Math.max(minimumFare, baseFare + distanceFare);
-  return {
-    currency: "INR",
-    distanceMeters: route.distanceMeters,
-    durationSeconds: route.durationSeconds,
-    baseFare: money(baseFare),
-    distanceFare: money(distanceFare),
-    totalFare: money(totalFare),
-  };
-}
+export type FareStop={name?:string;address?:string;latitude:number;longitude:number};
+export type RidePricingConfig={baseFare:number;perKm:number;minimumFare:number;guideFee:number;gstPercent:number;currency:"INR";updatedAt?:Date};
+export type FareQuote={currency:"INR";distanceMeters:number;durationSeconds:number;baseFare:number;distanceFare:number;rideFare:number;guideFee:number;subtotal:number;gstPercent:number;gstAmount:number;totalFare:number;segments:Array<{from:FareStop;to:FareStop;distanceMeters:number;durationSeconds:number}>};
+const DEFAULT_PRICING:RidePricingConfig={baseFare:20,perKm:5,minimumFare:20,guideFee:300,gstPercent:5,currency:"INR"};
+const money=(v:number)=>Math.round((v+Number.EPSILON)*100)/100;
+function parsePricing(value:unknown):RidePricingConfig{if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("RIDE_PRICING_CONFIG_MISSING");const s=value as Record<string,unknown>;const baseFare=Number(s.baseFare),perKm=Number(s.perKm),minimumFare=Number(s.minimumFare),guideFee=Number(s.guideFee??DEFAULT_PRICING.guideFee),gstPercent=Number(s.gstPercent??DEFAULT_PRICING.gstPercent);if(![baseFare,perKm,minimumFare,guideFee,gstPercent].every(Number.isFinite)||[baseFare,perKm,minimumFare,guideFee,gstPercent].some(v=>v<0)||gstPercent>100)throw new Error("RIDE_PRICING_CONFIG_INVALID");return{baseFare,perKm,minimumFare,guideFee,gstPercent,currency:"INR"}}
+export async function getRidePricing():Promise<RidePricingConfig>{const row=await prisma.appSetting.findUnique({where:{key:"RIDE_PRICING"}});if(!row)return DEFAULT_PRICING;return{...parsePricing(row.value),updatedAt:row.updatedAt}}
+export async function updateRidePricing(input:Partial<RidePricingConfig>):Promise<RidePricingConfig>{const c=await getRidePricing();const next=parsePricing({baseFare:input.baseFare??c.baseFare,perKm:input.perKm??c.perKm,minimumFare:input.minimumFare??c.minimumFare,guideFee:input.guideFee??c.guideFee,gstPercent:input.gstPercent??c.gstPercent});const row=await prisma.appSetting.upsert({where:{key:"RIDE_PRICING"},create:{key:"RIDE_PRICING",value:next},update:{value:next}});return{...parsePricing(row.value),updatedAt:row.updatedAt}}
+export async function calculateFare(origin:{latitude:number;longitude:number},destination:{latitude:number;longitude:number},options:{destinations?:FareStop[];serviceType?:"RIDE_ONLY"|"GUIDE_ONLY"|"RIDE_AND_GUIDE"}={}):Promise<FareQuote>{const p=await getRidePricing();const stops=[{latitude:origin.latitude,longitude:origin.longitude} as FareStop,...(options.destinations??[]),{latitude:destination.latitude,longitude:destination.longitude} as FareStop];const segments:FareQuote["segments"]=[];let distanceMeters=0,durationSeconds=0;for(let i=0;i<stops.length-1;i++){const from=stops[i],to=stops[i+1];const r=await new GooglePlaceRouteAdapter().getRoute({latitude:from.latitude,longitude:from.longitude},{latitude:to.latitude,longitude:to.longitude});distanceMeters+=r.distanceMeters;durationSeconds+=r.durationSeconds;segments.push({from,to,distanceMeters:r.distanceMeters,durationSeconds:r.durationSeconds})}const distanceFare=distanceMeters/1000*p.perKm,rideFare=Math.max(p.minimumFare,p.baseFare+distanceFare),guideFee=options.serviceType==="GUIDE_ONLY"||options.serviceType==="RIDE_AND_GUIDE"?p.guideFee:0,subtotal=rideFare+guideFee,gstAmount=subtotal*p.gstPercent/100;return{currency:"INR",distanceMeters,durationSeconds,baseFare:money(p.baseFare),distanceFare:money(distanceFare),rideFare:money(rideFare),guideFee:money(guideFee),subtotal:money(subtotal),gstPercent:money(p.gstPercent),gstAmount:money(gstAmount),totalFare:money(subtotal+gstAmount),segments}}
