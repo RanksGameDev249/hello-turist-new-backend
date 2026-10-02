@@ -15,6 +15,28 @@ export async function getVerificationRequest(id: string) {
   return prisma.verificationRequest.findUnique({ where: { id }, include: { user: { select: { id: true, name: true, username: true, email: true } }, steps: true, documents: true, liveSession: true } });
 }
 
+export async function startAdminWhatsAppLiveSession(id: string, phone?: string) {
+  const request = await prisma.verificationRequest.findUnique({ where: { id }, select: { id: true, userId: true, role: true, status: true, liveSession: true } });
+  if (!request) throw new Error("VERIFICATION_REQUEST_NOT_FOUND");
+  if (![ "PENDING", "UNDER_VERIFICATION", "RESUBMITTED" ].includes(request.status)) throw new Error("INVALID_VERIFICATION_STATE");
+  const normalized = (phone ?? "").replace(/[^0-9]/g, "");
+  const providerReference = normalized ? "WHATSAPP:" + normalized : "WHATSAPP:MANUAL";
+  const now = new Date();
+  const result = await prisma.$transaction(async (tx) => {
+    const live = await tx.verificationLiveSession.upsert({
+      where: { verificationRequestId: id },
+      update: { providerReference, status: "IN_PROGRESS", startedAt: now },
+      create: { verificationRequestId: id, providerReference, status: "IN_PROGRESS", startedAt: now },
+    });
+    await tx.verificationStep.update({
+      where: { verificationRequestId_step: { verificationRequestId: id, step: "LIVE_SESSION" } },
+      data: { status: "IN_PROGRESS", completedAt: null },
+    });
+    return live;
+  });
+  return result;
+}
+
 /** Application-owned verification: admin approval is the authoritative verification event. */
 export async function updateVerificationRequest(id: string, status: "VERIFIED" | "REJECTED", reason?: string) {
   const existing = await prisma.verificationRequest.findUnique({ where: { id }, include: { documents: true, liveSession: true } });
