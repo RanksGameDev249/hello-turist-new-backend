@@ -15,7 +15,7 @@ export async function shareTrip(userId:string,rideId:string,input:CreateSharedTr
  if(contact.inviteeUserId&&contact.consentStatus!=="ACCEPTED")throw new Error("TRUSTED_CONTACT_NOT_ACCEPTED");
  const shared=await prisma.sharedTrip.create({data:{rideId,contactId:input.contactId,expiresAt:new Date(Date.now()+input.expiresInMinutes*60_000)}});
  const base=process.env.PUBLIC_SHARE_BASE_URL?.replace(/\/$/,"")||"https://hello-turist-backend-223677684112.asia-south2.run.app"; const shareUrl=base ? base+"/api/v1/shared-trips/"+shared.id : "/api/v1/shared-trips/"+shared.id;
- await notify(userId,"Trip shared","Your trip has been shared with a trusted contact.",{event:"TRIP_SHARED",rideId,sharedTripId:shared.id,shareUrl}); return {...shared,shareUrl};
+ await notify(contact.inviteeUserId || userId,"Trip shared","A trusted contact shared a live trip with you.",{event:"TRIP_SHARED",destination:"SHARED_TRIP",rideId,sharedTripId:shared.id,shareUrl}); return {...shared,shareUrl};
 }
 export async function getSafetyOverview(userId:string){const [contacts,activeIncident]=await Promise.all([prisma.trustedContact.count({where:{ownerId:userId,consentStatus:"ACCEPTED"}}),prisma.emergencyIncident.findFirst({where:{riderId:userId,state:{not:"RESOLVED"}},orderBy:{createdAt:"desc"}})]);return{trustedContacts:contacts,activeIncident}}
 async function assertIncidentAccess(userId:string,incidentId:string){const incident=await prisma.emergencyIncident.findUnique({where:{id:incidentId}});if(!incident)throw new Error("EMERGENCY_NOT_FOUND");if(incident.riderId!==userId)throw new Error("FORBIDDEN");return incident}
