@@ -485,6 +485,66 @@ model SavedPlace {
   @@map("saved_places")
 }
 
+
+model Homestay {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  address     String
+  city        String?
+  latitude    Decimal  @db.Decimal(10, 7)
+  longitude   Decimal  @db.Decimal(10, 7)
+  placeId     String?  @map("place_id")
+  imageUrl    String?  @map("image_url")
+  phone       String?
+  website     String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  @@index([city, isActive])
+  @@map("homestays")
+}
+
+model Sponsor {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  address     String?
+  city        String?
+  latitude    Decimal? @db.Decimal(10, 7)
+  longitude   Decimal? @db.Decimal(10, 7)
+  placeId     String?  @map("place_id")
+  imageUrl    String?  @map("image_url")
+  phone       String?
+  email       String?
+  website     String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  @@index([city, isActive])
+  @@map("sponsors")
+}
+
+model BusinessPartner {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  address     String?
+  city        String?
+  latitude    Decimal? @db.Decimal(10, 7)
+  longitude   Decimal? @db.Decimal(10, 7)
+  placeId     String?  @map("place_id")
+  imageUrl    String?  @map("image_url")
+  phone       String?
+  email       String?
+  website     String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  @@index([city, isActive])
+  @@map("business_partners")
+}
+
 enum VehicleType {
   CAR
   SUV
