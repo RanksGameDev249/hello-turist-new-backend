@@ -5,7 +5,7 @@ import { redisRateLimit } from "../../middleware/rate-limit";
 import { adminMiddleware } from "../../middleware/admin";
 import { requirePermission } from "../../middleware/rbac";
 import { updateUserRoleVerification, decideVerification, listAdminUsersController, listAuditLogsController } from "./admin.controller";
-import { getVerificationRequestById, getVerificationRequests } from "./verification.controller";
+import { getVerificationRequestById, getVerificationRequests, startWhatsAppLiveVerification } from "./verification.controller";
 import { getPeople, getPersonById, createPersonController, updatePersonController, deletePersonController } from "./people.controller";
 import { getBrandingController, updateBrandingController } from "./branding.controller";
 import { getAdminHomeBannerController, updateHomeBannerController } from "../home-content/home-content.controller";
@@ -50,6 +50,7 @@ router.post("/content/:type", ...admin, requirePermission("content.manage"), adm
 router.patch("/content/:type/:id", ...admin, requirePermission("content.manage"), adminMutationLimit, idempotencyMiddleware(), updateContentController);
 router.delete("/content/:type/:id", ...admin, requirePermission("content.manage"), adminMutationLimit, idempotencyMiddleware(), deleteContentController);
 router.patch("/users/:userId/roles/:role", ...admin, requirePermission("drivers.verify", "guides.verify"), adminMutationLimit, idempotencyMiddleware(), updateUserRoleVerification);
+router.post("/verification/requests/:id/live-whatsapp", ...admin, requirePermission("drivers.verify", "guides.verify"), adminMutationLimit, idempotencyMiddleware(), startWhatsAppLiveVerification);
 router.patch("/verification/requests/:id", ...admin, requirePermission("drivers.verify", "guides.verify"), adminMutationLimit, idempotencyMiddleware(), decideVerification);
 router.get("/branding", ...admin, requirePermission("branding.read"), getBrandingController);
 router.patch("/branding", ...admin, requirePermission("branding.manage"), adminMutationLimit, idempotencyMiddleware(), updateBrandingController);
