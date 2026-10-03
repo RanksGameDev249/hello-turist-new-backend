@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const curatedPlaceTypeSchema = z.enum(["SPONSOR", "HOMESTAY", "HISTORICAL_PLACE"]);
+export const curatedPlaceTypeSchema = z.enum(["SPONSOR", "HOMESTAY", "HISTORICAL_PLACE", "HOTEL", "RESTAURANT", "FOOD"]);
 
 export const curatedPlaceIdSchema = z.object({ id: z.string().uuid() });
 
@@ -47,6 +47,8 @@ const curatedPlaceBaseSchema = z.object({
   sponsorName: optionalTrimmedString(200),
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  isPartner: z.boolean().default(false),
+  notificationEnabled: z.boolean().default(true),
 });
 
 const validateCuratedPlaceRules = <T extends z.ZodType>(schema: T) =>
