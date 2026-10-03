@@ -243,6 +243,7 @@ model Ride {
   scheduledAt        DateTime?         @map("scheduled_at")
   status             RideStatus        @default(REQUESTED)
   notes              String?
+  destinations       Json?
   cancelledAt        DateTime?         @map("cancelled_at")
   cancellationReason String?           @map("cancellation_reason")
   completedAt        DateTime?         @map("completed_at")
@@ -593,6 +594,7 @@ enum NotificationType {
   VERIFICATION_UPDATE
   SYSTEM
   SECURITY
+  PARTNER_PROMOTION
 }
 
 enum TrustedContactConsentStatus {
