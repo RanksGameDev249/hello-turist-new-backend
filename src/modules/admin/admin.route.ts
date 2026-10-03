@@ -11,7 +11,7 @@ import { getBrandingController, updateBrandingController } from "./branding.cont
 import { getAdminHomeBannerController, updateHomeBannerController } from "../home-content/home-content.controller";
 import { getOperationalRides, getOperationalRideById, assignOperationalRideController, cancelOperationalRideController, interruptOperationalRideController, recoverOperationalRideController } from "./ride-operations.controller";
 import { listEmergencyAdmin, getEmergencyAdmin, acknowledgeEmergencyAdminController, escalateEmergencyAdminController, resolveEmergencyAdminController, assignResponderAdmin, responderStatusAdmin } from "./emergency.controller";
-import { getRidePricingController, updateRidePricingController } from "./pricing.controller";
+import { getRidePricingController, updateRidePricingController, getGuidePricingController, updateGuidePricingController, getTaxConfigController, updateTaxConfigController } from "./pricing.controller";
 import { listAdminPaymentsController, refundAdminPaymentController } from "./finance.controller";
 import { listAdminPermissions, updateAdminPermissions } from "./rbac.controller";
 import { getAdminAnalytics } from "./analytics.controller";
@@ -47,6 +47,10 @@ router.get("/home-banner", ...admin, requirePermission("branding.read"), getAdmi
 router.patch("/home-banner", ...admin, requirePermission("branding.manage"), adminMutationLimit, idempotencyMiddleware(), updateHomeBannerController);
 router.get("/pricing/ride", ...admin, requirePermission("pricing.read"), getRidePricingController);
 router.patch("/pricing/ride", ...admin, requirePermission("pricing.manage"), adminMutationLimit, idempotencyMiddleware(), updateRidePricingController);
+router.get("/pricing/guide", ...admin, requirePermission("pricing.read"), getGuidePricingController);
+router.patch("/pricing/guide", ...admin, requirePermission("pricing.manage"), adminMutationLimit, idempotencyMiddleware(), updateGuidePricingController);
+router.get("/pricing/tax", ...admin, requirePermission("pricing.read"), getTaxConfigController);
+router.patch("/pricing/tax", ...admin, requirePermission("pricing.manage"), adminMutationLimit, idempotencyMiddleware(), updateTaxConfigController);
 router.get("/rides", ...admin, requirePermission("rides.read"), getOperationalRides);
 router.get("/rides/:id", ...admin, requirePermission("rides.read"), getOperationalRideById);
 router.post("/rides/:id/assign", ...admin, requirePermission("rides.manage"), adminMutationLimit, idempotencyMiddleware(), assignOperationalRideController);

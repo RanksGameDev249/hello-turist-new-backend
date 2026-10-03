@@ -16,6 +16,7 @@ import {
 const router = Router();
 
 router.use(authMiddleware);
+router.post("/partner-promotions/nearby", nearbyPartnerPromotionController);
 router.get("/", listNotificationsController);
 router.patch("/read-all", markAllNotificationsReadController);
 router.post("/devices", registerNotificationDeviceController);

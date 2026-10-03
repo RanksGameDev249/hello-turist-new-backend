@@ -1,7 +1,7 @@
 # Curated Discovery, Sponsors, Homestays & Historical Places
 
 ## Purpose
-Hello Kurukshetra provides a curated discovery layer controlled by the Admin panel. This layer is separate from generic third-party merchant/shop search.
+Hello Kurukshetra provides a curated discovery layer controlled by the Admin panel. This layer is separate from generic third-party merchant/shop search. Partner promotions and notifications also use this curated dataset; Google Places merchant results are not eligible for partner notifications.
 
 ## Rider Home
 The Home screen must show Admin-managed:
@@ -16,6 +16,7 @@ Homestay cards should support name, images, location/address, amenities and opti
 The curated discovery map must show only records managed by Hello Kurukshetra Admin:
 - Sponsors
 - Homestays
+- Partner Hotels/Restaurants/Food listings when explicitly enabled for curated discovery
 
 No generic merchant/shop records may be returned by the curated discovery API.
 
@@ -23,7 +24,7 @@ The normal underlying map provider may still render its own base-map labels acco
 
 ## Admin Panel
 Admins can:
-1. Add a Sponsor, Homestay or Historical Place.
+1. Add a Sponsor, Homestay, Historical Place, Hotel, Restaurant or Food listing.
 2. Enter exact latitude and longitude.
 3. Enter address/city.
 4. Add description and images.
@@ -31,7 +32,8 @@ Admins can:
 6. Add historical information for historical places.
 7. Mark a listing as featured.
 8. Activate/deactivate a listing.
-9. Edit existing listings.
+9. Mark a listing as a partner and enable/disable nearby promotional notifications.
+10. Edit existing listings.
 
 Only active listings are exposed to Riders.
 
@@ -45,7 +47,7 @@ Only active listings are exposed to Riders.
 - `DELETE /api/v1/discovery/admin/:id` — Admin deactivates a curated record.
 
 ## Data types
-`SPONSOR`, `HOMESTAY`, `HISTORICAL_PLACE`.
+`SPONSOR`, `HOMESTAY`, `HISTORICAL_PLACE`, `HOTEL`, `RESTAURANT`, `FOOD`.
 
 ## Acceptance criteria
 - A third-party shop/merchant is never returned by the curated map endpoint.
@@ -55,3 +57,7 @@ Only active listings are exposed to Riders.
 - Deactivated records disappear from Rider-facing discovery responses.
 - Coordinates entered by Admin are returned to the client for map markers.
 - Admin create/update/deactivate actions are audit logged.
+
+
+## Nearby promotional notifications
+An authenticated rider can submit the current location to `POST /api/v1/notifications/partner-promotions/nearby`. The backend searches only active curated partner/sponsor records inside the requested radius. A notification is created and sent through FCM when a device is registered. The same place is suppressed for 24 hours per rider.

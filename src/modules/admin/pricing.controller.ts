@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { getRidePricing, updateRidePricing } from "../ride/fare.service";
+import { getRidePricing, updateRidePricing, getGuidePricing, updateGuidePricing, getTaxConfig, updateTaxConfig } from "../ride/fare.service";
 import { writeAuditLog } from "./audit.service";
 
 function numberField(value: unknown, field: string): number | undefined {
@@ -30,5 +30,44 @@ export async function updateRidePricingController(req: Request, res: Response) {
   } catch (error) {
     const code = error instanceof Error ? error.message : "INVALID_RIDE_PRICING";
     return res.status(400).json({ success: false, data: null, error: { code, message: "Invalid ride pricing" }, requestId: req.requestId });
+  }
+}
+
+
+export async function getGuidePricingController(req: Request, res: Response) {
+  try { return res.status(200).json({ success: true, data: await getGuidePricing(), error: null, requestId: req.requestId }); }
+  catch { return res.status(500).json({ success: false, data: null, error: { code: "GUIDE_PRICING_READ_FAILED", message: "Unable to load guide pricing" }, requestId: req.requestId }); }
+}
+
+export async function updateGuidePricingController(req: Request, res: Response) {
+  try {
+    const data = await updateGuidePricing({
+      hourlyRate: numberField(req.body?.hourlyRate, "GUIDE_HOURLY_RATE"),
+      minimumHours: numberField(req.body?.minimumHours, "GUIDE_MINIMUM_HOURS"),
+    });
+    await writeAuditLog({ actorUserId: req.user!.id, action: "GUIDE_PRICING_UPDATED", entityType: "APP_SETTING", metadata: { setting: "GUIDE_PRICING", hourlyRate: data.hourlyRate, minimumHours: data.minimumHours }, requestId: req.requestId });
+    return res.status(200).json({ success: true, data, error: null, requestId: req.requestId });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "INVALID_GUIDE_PRICING";
+    return res.status(400).json({ success: false, data: null, error: { code, message: "Invalid guide pricing" }, requestId: req.requestId });
+  }
+}
+
+export async function getTaxConfigController(req: Request, res: Response) {
+  try { return res.status(200).json({ success: true, data: await getTaxConfig(), error: null, requestId: req.requestId }); }
+  catch { return res.status(500).json({ success: false, data: null, error: { code: "TAX_CONFIG_READ_FAILED", message: "Unable to load GST configuration" }, requestId: req.requestId }); }
+}
+
+export async function updateTaxConfigController(req: Request, res: Response) {
+  try {
+    const data = await updateTaxConfig({
+      rideGstRate: numberField(req.body?.rideGstRate, "RIDE_GST_RATE"),
+      guideGstRate: numberField(req.body?.guideGstRate, "GUIDE_GST_RATE"),
+    });
+    await writeAuditLog({ actorUserId: req.user!.id, action: "GST_CONFIG_UPDATED", entityType: "APP_SETTING", metadata: { setting: "GST_CONFIG", rideGstRate: data.rideGstRate, guideGstRate: data.guideGstRate }, requestId: req.requestId });
+    return res.status(200).json({ success: true, data, error: null, requestId: req.requestId });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "INVALID_TAX_CONFIG";
+    return res.status(400).json({ success: false, data: null, error: { code, message: "Invalid GST configuration" }, requestId: req.requestId });
   }
 }
