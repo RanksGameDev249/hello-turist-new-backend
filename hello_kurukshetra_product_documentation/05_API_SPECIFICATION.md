@@ -122,3 +122,22 @@ Admin endpoints are under `/admin` and require explicit permissions:
 - GET `/providers/:id/languages`
 
 Recommendations may use coarse region when available; they must never silently change the account preference.
+
+## Fare calculation: multi-destination + guide + GST
+
+POST /rides/quote accepts an ordered `destinations` array of up to 8 intermediate stops. Routing is calculated as pickup → destination 1 → destination 2 → … → final dropoff. The response returns total distance/duration, per-stop legs, ride fare, guide fare, guide hours, separate ride/guide GST amounts, total GST and final total.
+
+For `RIDE_AND_GUIDE`, the configured guide hourly charge is added to the ride fare. `GUIDE_ONLY` excludes the ride charge. Ride creation persists the ordered destinations, and payment endpoints recalculate from those persisted destinations/service type so the checkout amount cannot silently fall back to a single-drop fare.
+
+GST is configurable through `GST_CONFIG`. Initial defaults are 5% for the ride component and 18% for the guide component. These are application defaults, not tax advice; production billing must be reviewed against the business's actual GST registration/service classification.
+
+## Nearby partner/sponsor notifications
+
+- POST `/notifications/partner-promotions/nearby`
+- Authenticated rider endpoint.
+- Body: `latitude`, `longitude`, optional `radiusKm` (0.5–25), optional `limit` (1–5), optional `types` (`HOMESTAY`, `HOTEL`, `RESTAURANT`, `FOOD`).
+- Only active Admin-curated records with `notificationEnabled=true` and either `isPartner=true` or a non-null `sponsorName` are eligible.
+- Creates an in-app notification and sends FCM when a registered device exists.
+- The same partner/place is suppressed for 24 hours per rider.
+- Example notification styles: “🏡 Homestay near you”, “🏨 Hotel near you”, “🍽️ Hungry?”, and “🍴 Food near you”. Starting price is included when `priceFrom` exists.
+- Generic Google merchant/Places results are never used for these partner promotions.
