@@ -92,8 +92,14 @@ jobs:
             --set-secrets "DATABASE_URL=hello-turist-database-url:latest,REDIS_URL=hello-turist-redis-url:latest,ACCESS_TOKEN_SECRET=hello-turist-access-token-secret:latest,REFRESH_TOKEN_SECRET=hello-turist-refresh-token-secret:latest,GOOGLE_MAPS_API_KEY=hello-turist-google-maps-api-key:latest,FIREBASE_PROJECT_ID=hello-turist-firebase-project-id:latest,FCM_SERVICE_ACCOUNT_EMAIL=hello-turist-fcm-service-account-email:latest,FCM_PRIVATE_KEY=hello-turist-fcm-private-key:latest,RAZORPAY_KEY_ID=hello-turist-razorpay-key-id:latest,RAZORPAY_KEY_SECRET=hello-turist-razorpay-key-secret:latest,RAZORPAY_WEBHOOK_SECRET=hello-turist-razorpay-webhook-secret:latest,CLOUDINARY_CLOUD_NAME=hello-turist-cloudinary-cloud-name:latest,CLOUDINARY_API_KEY=hello-turist-cloudinary-api-key:latest,CLOUDINARY_API_SECRET=hello-turist-cloudinary-api-secret:latest" \
             --quiet
 
-      - name: Show deployed revision
+      - name: Verify deployed revision
         run: |
-          gcloud run services describe "$CLOUD_RUN_SERVICE" \
-            --region "$GCP_REGION" \
-            --format='value(status.latestReadyRevisionName)'
+          set -euo pipefail
+          REVISION="$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --format='value(status.latestReadyRevisionName)')"
+          SERVICE_URL="$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --format='value(status.url)')"
+          echo "Deployed revision: $REVISION"
+          echo "Service URL: $SERVICE_URL"
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$SERVICE_URL/health"
+          echo
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$SERVICE_URL/ready"
+          echo
