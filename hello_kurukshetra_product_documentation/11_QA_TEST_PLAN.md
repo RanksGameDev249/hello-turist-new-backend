@@ -24,6 +24,9 @@ Document upload, invalid file, expired document, rejection, resubmission, live v
 ### Booking
 Quote, confirmation, duplicate request, no supply, assignment timeout, driver rejection, cancellation.
 
+### Fare calculation
+Verify pickup → destination1 → destination2 → final dropoff routing, route-leg aggregation, minimum/base/per-km fare, RIDE_ONLY, GUIDE_ONLY and RIDE_AND_GUIDE, configured guide hours/rate, separate ride/guide GST amounts, final total, and payment recalculation from persisted destinations.
+
 ### Trip
 Arriving, arrived, start, progress, completion, GPS loss, network loss, reconnect and process death.
 
@@ -34,7 +37,10 @@ Freeze state, compute completed segment, replacement assignment, transparent far
 Pickup discovery, destination discovery, filters, availability and independent assignment.
 
 ### Payments
-Success, failure, delayed webhook, duplicate webhook, refund, partial refund, cash.
+Success, failure, delayed webhook, duplicate webhook, refund, partial refund, cash. Verify Razorpay/order amount exactly matches the server's multi-destination + guide + GST fare.
+
+### Partner notifications
+Verify only active Admin-curated partner/sponsor records can trigger nearby promotions; test homestay/hotel/restaurant/food copy, radius filtering, FCM delivery, in-app persistence, 24-hour per-place cooldown, and exclusion of generic Google merchant results.
 
 ### Emergency
 SOS, duplicate SOS prevention, acknowledgement, responder assignment, escalation, arrival, resolution, audit.
