@@ -141,3 +141,10 @@ GST is configurable through `GST_CONFIG`. Initial defaults are 5% for the ride c
 - The same partner/place is suppressed for 24 hours per rider.
 - Example notification styles: “🏡 Homestay near you”, “🏨 Hotel near you”, “🍽️ Hungry?”, and “🍴 Food near you”. Starting price is included when `priceFrom` exists.
 - Generic Google merchant/Places results are never used for these partner promotions.
+
+
+## Admin pricing controls
+- GET/PATCH `/admin/pricing/ride` — base fare, per-km rate and minimum fare.
+- GET/PATCH `/admin/pricing/guide` — guide hourly rate and minimum billable hours.
+- GET/PATCH `/admin/pricing/tax` — ride and guide GST rates used by the fare engine.
+All pricing mutations are permission-protected, idempotent and audit logged.
