@@ -2,7 +2,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../core/prisma";
 import type { CreateCuratedPlaceInput, UpdateCuratedPlaceInput } from "./discovery.schema";
 
-const columns = `id, type, name, description, history, address, city, latitude, longitude, images, amenities, price_from AS "priceFrom", phone, website, sponsor_name AS "sponsorName", is_featured AS "isFeatured", is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt"`;
+const columns = `id, type, name, description, history, address, city, latitude, longitude, images, amenities, price_from AS "priceFrom", phone, website, sponsor_name AS "sponsorName", is_featured AS "isFeatured", is_active AS "isActive", is_partner AS "isPartner", notification_enabled AS "notificationEnabled", created_at AS "createdAt", updated_at AS "updatedAt"`;
 
 export async function listPublishedDiscovery(params: { type?: string; city?: string; limit: number }) {
   return prisma.$queryRaw<any[]>(Prisma.sql`
@@ -24,8 +24,8 @@ export async function getCuratedPlace(id: string) {
 
 export async function createCuratedPlace(input: CreateCuratedPlaceInput, adminUserId: string) {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    INSERT INTO curated_places (type, name, description, history, address, city, latitude, longitude, images, amenities, price_from, phone, website, sponsor_name, is_featured, is_active, created_by)
-    VALUES (${input.type}, ${input.name}, ${input.description ?? null}, ${input.history ?? null}, ${input.address}, ${input.city ?? null}, ${input.latitude}, ${input.longitude}, ${JSON.stringify(input.images)}::jsonb, ${JSON.stringify(input.amenities)}::jsonb, ${input.priceFrom ?? null}, ${input.phone ?? null}, ${input.website ?? null}, ${input.sponsorName ?? null}, ${input.isFeatured}, ${input.isActive}, ${adminUserId}::uuid)
+    INSERT INTO curated_places (type, name, description, history, address, city, latitude, longitude, images, amenities, price_from, phone, website, sponsor_name, is_featured, is_active, is_partner, notification_enabled, created_by)
+    VALUES (${input.type}, ${input.name}, ${input.description ?? null}, ${input.history ?? null}, ${input.address}, ${input.city ?? null}, ${input.latitude}, ${input.longitude}, ${JSON.stringify(input.images)}::jsonb, ${JSON.stringify(input.amenities)}::jsonb, ${input.priceFrom ?? null}, ${input.phone ?? null}, ${input.website ?? null}, ${input.sponsorName ?? null}, ${input.isFeatured}, ${input.isActive}, ${input.isPartner}, ${input.notificationEnabled}, ${adminUserId}::uuid)
     RETURNING ${Prisma.raw(columns)}
   `);
   return rows[0];
@@ -35,7 +35,7 @@ export async function updateCuratedPlace(id: string, input: UpdateCuratedPlaceIn
   const map: Record<string, string> = {
     type: "type", name: "name", description: "description", history: "history", address: "address", city: "city",
     latitude: "latitude", longitude: "longitude", images: "images", amenities: "amenities", priceFrom: "price_from",
-    phone: "phone", website: "website", sponsorName: "sponsor_name", isFeatured: "is_featured", isActive: "is_active",
+    phone: "phone", website: "website", sponsorName: "sponsor_name", isFeatured: "is_featured", isActive: "is_active", isPartner: "is_partner", notificationEnabled: "notification_enabled",
   };
   const entries = Object.entries(input).filter(([, value]) => value !== undefined);
   if (!entries.length) return getCuratedPlace(id);
