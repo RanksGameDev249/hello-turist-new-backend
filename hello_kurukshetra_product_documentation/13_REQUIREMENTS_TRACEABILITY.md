@@ -8,7 +8,10 @@
 | Guide 3-step verification | Verification, Guide, Admin | E2E |
 | Google Maps | Maps, Ride | UI + integration |
 | Ride-purpose popup | Rider/Ride | UI |
-| Ride booking | Ride, Dispatch | E2E |
+| Ride booking | Ride, Dispatch, Fare | E2E + fare contract |
+| Multi-destination fare | Ride, Fare, Maps | Route-leg integration + payment amount |
+| Ride + Guide combined fare | Ride, Guide, Fare | Quote + payment E2E |
+| GST breakup | Fare, Payment | Tax calculation contract + payment E2E |
 | Driver assignment | Dispatch | Integration/load |
 | Guide discovery | Guide | E2E |
 | Ride + Guide | Ride + Guide assignments | E2E |
@@ -16,6 +19,7 @@
 | Cash | Payment/Earnings | E2E |
 | Realtime tracking | Realtime/Ride | Integration |
 | Notifications | Notification | Delivery/retry tests |
+| Partner/sponsor nearby promotions | Discovery, Notification, FCM | Radius + cooldown + curated-only E2E |
 | SOS | Safety/Emergency | E2E + simulation |
 | Lost heartbeat | Safety | Integration |
 | Trusted contacts | Family/Safety | E2E |
